@@ -8,11 +8,7 @@ interface PageProps {
 }
 
 function Page({ children, className = '' }: PageProps) {
-  return (
-    <main className={`page ${className}`}>
-      <div className="page__content">{children}</div>
-    </main>
-  );
+  return <main className={`page ${className}`}>{children}</main>;
 }
 
 export default Page;

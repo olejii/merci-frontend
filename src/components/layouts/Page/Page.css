@@ -8,9 +8,3 @@
             calc(24px + env(safe-area-inset-bottom, 0px))
             calc(20px + env(safe-area-inset-left, 0px));
 }
-
-.page__content {
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-}
