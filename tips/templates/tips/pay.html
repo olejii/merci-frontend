@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Чаевые онлайн</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #17211b; background: #f3f6f3; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 480px; margin: 8vh auto; padding: 28px; border-radius: 18px; background: white; box-shadow: 0 8px 30px #17211b14; }
+    h1 { margin-top: 0; font-size: 1.5rem; }
+    button, input { box-sizing: border-box; width: 100%; padding: 12px 14px; margin: 7px 0; border: 1px solid #cbd5ce; border-radius: 10px; font: inherit; }
+    button { cursor: pointer; background: #176b43; border-color: #176b43; color: white; font-weight: 650; }
+    button.secondary { background: white; color: #176b43; }
+    button.selected { outline: 3px solid #a9ddbf; }
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .choices button { margin: 0; }
+    .summary { padding: 14px; border-radius: 10px; background: #f3f6f3; }
+    .summary p { display: flex; justify-content: space-between; gap: 16px; }
+    .error { color: #a32121; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <p id="step-label">Онлайн-чаевые</p>
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <section id="screen-welcome">
+    <h1>Сказать спасибо</h1>
+    <p id="merchant"></p>
+    <p><span id="employee-role">Сотрудник</span>: <strong id="employee"></strong></p>
+    <div id="goals-preview"></div>
+    <button id="continue" disabled>Продолжить</button>
+  </section>
+
+  <section id="screen-choice" hidden>
+    <h1>Выберите чаевые</h1>
+    <div class="choices" id="tip-options" aria-label="Сумма чаевых">
+    </div>
+    <label for="custom-tip">Или введите сумму чаевых</label>
+    <input id="custom-tip" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" placeholder="Например, 150.00">
+    <label for="goal">Поддержать цель сотрудника (необязательно)</label>
+    <select id="goal"><option value="">Без цели</option></select>
+    <h2>Оценка и отзыв</h2>
+    <label for="service-rating">Оценка сервиса</label>
+    <select id="service-rating">
+      <option value="">Не оценивать</option>
+      <option value="5">★★★★★ — отлично</option>
+      <option value="4">★★★★☆ — хорошо</option>
+      <option value="3">★★★☆☆ — нормально</option>
+      <option value="2">★★☆☆☆ — плохо</option>
+      <option value="1">★☆☆☆☆ — очень плохо</option>
+    </select>
+    <label for="restaurant-rating">Оценка ресторану</label>
+    <select id="restaurant-rating">
+      <option value="">Не оценивать</option>
+      <option value="5">★★★★★</option>
+      <option value="4">★★★★☆</option>
+      <option value="3">★★★☆☆</option>
+      <option value="2">★★☆☆☆</option>
+      <option value="1">★☆☆☆☆</option>
+    </select>
+    <label for="restaurant-comment">Отзыв ресторану (необязательно)</label>
+    <input id="restaurant-comment" maxlength="500" placeholder="Поделитесь впечатлением">
+    <label for="compliment">Комплимент сотруднику</label>
+    <select id="compliment">
+      <option value="">Без комплимента</option>
+    </select>
+    <label for="employee-comment">Личный комментарий сотруднику (необязательно)</label>
+    <input id="employee-comment" maxlength="500" placeholder="Напишите лично сотруднику">
+    <h2>Способ оплаты</h2>
+    <div class="choices" id="payment-methods">
+    </div>
+    <label><input id="cover-fee" type="checkbox" style="width:auto"> Покрыть комиссию сервиса — 25 ₽</label>
+    <div class="summary">
+      <p>Чаевые <strong id="tip-preview"></strong></p>
+      <p>Комиссия сервиса <strong id="fee-preview"></strong></p>
+      <p>К оплате <strong id="total-preview"></strong></p>
+    </div>
+    <button id="to-confirm">Оплатить</button>
+    <button id="back" class="secondary">Назад</button>
+  </section>
+
+  <section id="screen-confirm" hidden>
+    <h1>Подтвердите оплату</h1>
+    <div class="summary">
+      <p>Чаевые <strong id="confirm-tip"></strong></p>
+      <p>Комиссия сервиса <strong id="confirm-fee"></strong></p>
+      <p>Способ оплаты <strong id="confirm-method"></strong></p>
+      <p>Итого <strong id="confirm-total"></strong></p>
+    </div>
+    <button id="pay">Подтвердить оплату</button>
+    <button id="cancel" class="secondary">Отменить</button>
+  </section>
+
+  <section id="screen-result" hidden aria-live="polite">
+    <h1 id="result-title"></h1>
+    <p id="result-message"></p>
+    <button id="finish" class="secondary">Закрыть</button>
+  </section>
+</main>
+<script>
+  const screens = ["welcome", "choice", "confirm", "result"];
+  const money = (value) => `${Number(value).toFixed(2)} ₽`;
+  const errorBox = document.getElementById("error");
+  let qr;
+  let selectedTipAmount;
+  let selectedPaymentMethod;
+  let payment;
+  const idempotencyKey = crypto.randomUUID
+    ? crypto.randomUUID()
+    : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const methodLabels = {
+    SBP: "СБП",
+    CARD: "Банковская карта",
+    SBERPAY: "SberPay",
+    APPLE_PAY: "Apple Pay",
+  };
+
+  function showScreen(name) {
+    screens.forEach((screen) => {
+      document.getElementById(`screen-${screen}`).hidden = screen !== name;
+    });
+    document.getElementById("step-label").textContent =
+      `Шаг ${screens.indexOf(name) + 1} из 4`;
+    errorBox.hidden = true;
+  }
+
+  function showError(message) {
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+  }
+
+  function csrfToken() {
+    const cookie = document.cookie.split("; ").find((item) => item.startsWith("csrftoken="));
+    return cookie ? decodeURIComponent(cookie.split("=")[1]) : "";
+  }
+
+  async function postJson(url, body, headers = {}) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken(),
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    return { response, data };
+  }
+
+  function selectedTip() {
+    const custom = document.getElementById("custom-tip").value;
+    return custom === "" ? selectedTipAmount : Number(custom);
+  }
+
+  function updatePreview() {
+    if (!qr) return;
+    const tip = selectedTip();
+    const fee = document.getElementById("cover-fee").checked ? 25 : 0;
+    document.getElementById("tip-preview").textContent = money(tip);
+    document.getElementById("fee-preview").textContent = money(fee);
+    document.getElementById("total-preview").textContent = money(tip + fee);
+  }
+
+  async function initialize() {
+    const qrId = new URLSearchParams(location.search).get("qr");
+    if (!qrId) {
+      showError("В ссылке отсутствует QR-код.");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/v1/qr/${encodeURIComponent(qrId)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || data.error_code);
+      qr = data;
+      document.getElementById("merchant").textContent = data.merchant_name || "Спасибо, что посетили наше заведение";
+      document.getElementById("employee").textContent = data.employee_name;
+      document.getElementById("employee-role").textContent = data.employee_role_label || "Сотрудник";
+      const goalSelect = document.getElementById("goal");
+      const tipOptions = document.getElementById("tip-options");
+      data.tip_options.forEach((amount) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.tip = amount;
+        button.textContent = `${amount} ₽`;
+        tipOptions.append(button);
+      });
+      selectedTipAmount = data.tip_options.includes(100) ? 100 : data.tip_options[0];
+      document.querySelectorAll("[data-tip]").forEach((button) => {
+        button.classList.toggle("selected", Number(button.dataset.tip) === selectedTipAmount);
+        button.addEventListener("click", () => {
+          selectedTipAmount = Number(button.dataset.tip);
+          document.querySelectorAll("[data-tip]").forEach((item) => item.classList.toggle("selected", item === button));
+          document.getElementById("custom-tip").value = "";
+          updatePreview();
+        });
+      });
+      const paymentMethods = document.getElementById("payment-methods");
+      data.payment_methods.forEach((method) => {
+        methodLabels[method.value] = method.label;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.method = method.value;
+        button.textContent = method.label;
+        paymentMethods.append(button);
+      });
+      selectedPaymentMethod = data.payment_methods.some((method) => method.value === "SBP")
+        ? "SBP"
+        : data.payment_methods[0].value;
+      document.querySelectorAll("[data-method]").forEach((button) => {
+        button.classList.toggle("selected", button.dataset.method === selectedPaymentMethod);
+        button.addEventListener("click", () => {
+          selectedPaymentMethod = button.dataset.method;
+          document.querySelectorAll("[data-method]").forEach((item) => item.classList.toggle("selected", item === button));
+        });
+      });
+      data.compliment_options.forEach((compliment) => {
+        const option = document.createElement("option");
+        option.value = compliment.value;
+        option.textContent = compliment.label;
+        document.getElementById("compliment").append(option);
+      });
+      data.active_goals.forEach((goal) => {
+        const option = document.createElement("option");
+        option.value = goal.goal_id;
+        option.textContent = `${goal.title}: собрано ${money(goal.collected_amount)} из ${money(goal.target_amount)}`;
+        goalSelect.append(option);
+      });
+      document.getElementById("continue").disabled = false;
+      updatePreview();
+    } catch (error) {
+      showError(error.message || "Не удалось загрузить QR-код.");
+    }
+  }
+
+  document.getElementById("custom-tip").addEventListener("input", () => {
+    document.querySelectorAll("[data-tip]").forEach((item) => item.classList.remove("selected"));
+    updatePreview();
+  });
+  document.getElementById("cover-fee").addEventListener("change", updatePreview);
+  document.getElementById("continue").addEventListener("click", () => showScreen("choice"));
+  document.getElementById("back").addEventListener("click", () => showScreen("welcome"));
+  document.getElementById("to-confirm").addEventListener("click", async (event) => {
+    const tip = selectedTip();
+    if (!Number.isFinite(tip) || tip < 1 || tip > 1000000) {
+      showError("Укажите сумму чаевых от 1 до 1 000 000 ₽.");
+      return;
+    }
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const custom = document.getElementById("custom-tip").value;
+      const request = {
+        qr_id: qr.qr_id,
+        tip_amount: tip.toFixed(2),
+        payment_method: selectedPaymentMethod,
+        cover_service_fee: document.getElementById("cover-fee").checked,
+        idempotency_key: idempotencyKey,
+        goal_id: document.getElementById("goal").value || null,
+        service_rating: document.getElementById("service-rating").value
+          ? Number(document.getElementById("service-rating").value)
+          : null,
+        restaurant_rating: document.getElementById("restaurant-rating").value
+          ? Number(document.getElementById("restaurant-rating").value)
+          : null,
+        restaurant_comment: document.getElementById("restaurant-comment").value,
+        compliment: document.getElementById("compliment").value,
+        employee_comment: document.getElementById("employee-comment").value,
+      };
+      const result = await postJson("/api/v1/tips", request);
+      if (!result.response.ok) throw new Error(result.data.message || result.data.error_code);
+      payment = result.data;
+    } catch (error) {
+      showError(error.message || "Не удалось создать платёж.");
+      button.disabled = false;
+      return;
+    }
+    document.getElementById("confirm-tip").textContent = money(tip);
+    document.getElementById("confirm-fee").textContent = money(payment.service_fee_amount);
+    document.getElementById("confirm-method").textContent = methodLabels[payment.payment_method];
+    document.getElementById("confirm-total").textContent = money(payment.amount_total);
+    button.disabled = false;
+    showScreen("confirm");
+  });
+  document.getElementById("pay").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const result = await postJson(`/api/v1/payments/${encodeURIComponent(payment.payment_id)}/confirm`, {
+        confirm_token: payment.confirm_token,
+      });
+      if (![200, 402].includes(result.response.status)) throw new Error(result.data.message || result.data.error_code);
+      showResult(result.data);
+    } catch (error) {
+      showError(error.message || "Не удалось обработать платёж.");
+      button.disabled = false;
+    }
+  });
+  document.getElementById("cancel").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const result = await postJson(`/api/v1/payments/${encodeURIComponent(payment.payment_id)}/cancel`, {
+        confirm_token: payment.confirm_token,
+      });
+      if (!result.response.ok) throw new Error(result.data.message || result.data.error_code);
+      showResult(result.data);
+    } catch (error) {
+      showError(error.message || "Не удалось отменить платёж.");
+      button.disabled = false;
+    }
+  });
+  document.getElementById("finish").addEventListener("click", () => window.history.back());
+
+  function showResult(result) {
+    document.getElementById("result-title").textContent = {
+      SUCCESS: "Спасибо!",
+      DECLINED: "Оплата не прошла",
+      PENDING: "Обрабатываем платёж",
+      CANCELED: "Платёж отменён",
+    }[result.status] || "Результат оплаты";
+    document.getElementById("result-message").textContent = {
+      SUCCESS: "Чаевые отправлены.",
+      DECLINED: "Попробуйте другой способ оплаты.",
+      PENDING: "Проверьте статус через минуту.",
+      CANCELED: "Списание не выполнялось.",
+    }[result.status] || result.error_code || "";
+    showScreen("result");
+  }
+
+  initialize();
+</script>
+</body>
+</html>
