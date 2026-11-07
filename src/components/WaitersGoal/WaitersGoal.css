@@ -1,108 +1,109 @@
 .waiters-goal {
-    background: linear-gradient(104.73deg, #E9B57C 0%, #D9A066 45%, #B8783F 100%);
-    border-radius: 22px;
+  background: linear-gradient(104.73deg, #e9b57c 0%, #d9a066 45%, #b8783f 100%);
+  border-radius: 22px;
 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
 
-    padding: 14px 16px;
-    position: relative;
-    z-index: 1;
-    overflow: hidden;
+  padding: 14px 16px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 
-    transition: all .3s ease;
+  transition: all 0.3s ease;
 }
 
 .goal-overlay {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 0;
 }
 
 .goal-info {
-    width: 100%;
-    z-index: 2;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: start;
+  width: 100%;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: start;
 
-    & > * {
-        flex-shrink: 0;
-    }
+  & > * {
+    flex-shrink: 0;
+  }
 }
 
 .goal-icon {
-    background: rgba(78, 44, 18, 0.88);
-    border-radius: 14px;
-    width: 42px;
-    height: 42px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  background: rgba(78, 44, 18, 0.88);
+  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .goal-body {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: start;
 }
 
 .goal-body__name {
-    font-size: 12px;
-    line-height: 13px;
-    font-weight: 400;
-    color: rgba(46, 30, 20, 0.7)
+  font-size: 12px;
+  line-height: 13px;
+  font-weight: 400;
+  color: rgba(46, 30, 20, 0.7);
 }
 
-.goal-body__goal, .goal-percentage {
-    font-size: 17px;
-    line-height: 18px;
-    font-weight: 600;
-    color: rgba(46, 30, 20, 1)
+.goal-body__goal,
+.goal-percentage {
+  font-size: 17px;
+  line-height: 18px;
+  font-weight: 600;
+  color: rgba(46, 30, 20, 1);
 }
 
 .goal-percentage {
-   line-height: normal !important;
-    width: 42px;
-    height: 42px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  line-height: normal !important;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .progress {
-    height: 10px;
-    width: 100%;
-    background: rgba(255, 246, 236, 0.45);
-    border-radius: 9px;
+  height: 10px;
+  width: 100%;
+  background: rgba(255, 246, 236, 0.45);
+  border-radius: 9px;
 }
 
 .progress-bar {
-    background: #2E1E14;
-    height: 10px;
-    border-radius: 9px;
+  background: #2e1e14;
+  height: 10px;
+  border-radius: 9px;
 }
 
 .progress-sum {
-    font: var(--text-body);
-    width: 100%;
+  font: var(--text-body);
+  width: 100%;
 
-    & > span {
-        font-weight: 600;
-    }
+  & > span {
+    font-weight: 600;
+  }
 }
 
 .waiters-goal.expanded > .goal-info > .goal-percentage {
-    color: red;
-    display: none;
+  color: red;
+  display: none;
 }
 
 .waiters-goal.expanded {
-    padding: 28px 18px 32px;
+  padding: 28px 18px 32px;
 }

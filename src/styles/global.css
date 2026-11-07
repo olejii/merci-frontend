@@ -4,17 +4,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&display=swap');
 
 body {
-    font: var(--text-body);
+  font: var(--text-body);
 
-    color: var(--text-color);
-    background: var(--background);
+  color: var(--text-color);
+  background: var(--background);
 
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 
-    overflow-x: hidden;
+  overflow-x: hidden;
 }
 
 #root {
-    min-height: 100vh;
+  min-height: 100vh;
 }
