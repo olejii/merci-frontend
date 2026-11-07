@@ -1,6 +1,8 @@
+import { useState, useRef } from 'react';
+
 import { Page } from 'src/components/layouts';
 import { Button, WaitersGoal } from 'src/components';
-import { useState, useRef } from 'react';
+import { PaymentModal } from 'src/components/modals';
 
 import { EyeIcon, PrivacyIcon, ReceiptIcon, ShopIcon, StarIon } from 'src/assets/icons';
 
@@ -20,6 +22,7 @@ function GuestPage() {
   const [restReview, setRestReview] = useState<string>('');
   const [waiterReview, setWaiterReview] = useState<string>('');
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(true);
 
   const suggested_tips = [300, 500, 700, 1000];
   const suggested_compliments = ['Внимательный', 'Быстро', 'Отличные советы', 'Улыбка', 'Как дома'];
@@ -189,7 +192,7 @@ function GuestPage() {
       ) : null}
 
       <div className={'pay-button'}>
-        <Button disabled={tipsValue < 100}>
+        <Button disabled={tipsValue < 100} onClick={() => setIsPaymentModalOpen(true)}>
           {tipsValue ? `Оплатить ${tipsValue} ₽` : 'Выберите сумму'}
         </Button>
       </div>
@@ -210,6 +213,14 @@ function GuestPage() {
           </div>
         </>
       ) : null}
+
+      {isPaymentModalOpen && (
+        <PaymentModal
+          info={{ waiterName: 'Артем', waiterPhoto: WaiterImg, spot: 'Вкус-Сервис · Покровка' }}
+          amount={tipsValue}
+          onClose={() => setIsPaymentModalOpen(false)}
+        />
+      )}
     </Page>
   );
 }

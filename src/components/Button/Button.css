@@ -12,6 +12,7 @@ button.button {
   border: none;
   outline: none;
   padding: 0;
+  flex-shrink: 0;
 
   transition: all 0.3s ease;
   &:active {
