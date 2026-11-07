@@ -12,19 +12,24 @@
     position: relative;
     z-index: 1;
     overflow: hidden;
+
+    transition: all .3s ease;
 }
 
 .goal-overlay {
     position: absolute;
+    top: 0;
     right: 0;
     z-index: 0;
 }
 
 .goal-info {
+    width: 100%;
     z-index: 2;
     display: flex;
     gap: 12px;
     align-items: center;
+    justify-content: start;
 
     & > * {
         flex-shrink: 0;
@@ -82,4 +87,22 @@
     background: #2E1E14;
     height: 10px;
     border-radius: 9px;
+}
+
+.progress-sum {
+    font: var(--text-body);
+    width: 100%;
+
+    & > span {
+        font-weight: 600;
+    }
+}
+
+.waiters-goal.expanded > .goal-info > .goal-percentage {
+    color: red;
+    display: none;
+}
+
+.waiters-goal.expanded {
+    padding: 28px 18px 32px;
 }

@@ -1,19 +1,29 @@
 import { Page } from 'src/components/layouts';
+import { Button, WaitersGoal } from 'src/components';
+import { useState, useRef } from 'react';
+
+import { EyeIcon, PrivacyIcon, ReceiptIcon, ShopIcon, StarIon } from 'src/assets/icons';
 
 import Background from 'src/assets/Background.png';
 import WaiterImg from 'src/assets/waiter.png';
 
 import './GuestPage.css';
-import { Button, WaitersGoal } from 'src/components';
-import { useState, useRef } from 'react';
-import { ShopIcon } from 'src/assets/icons';
+
+const test_sum = Math.floor(Math.random() * 401) * 10 + 1000;
 
 function GuestPage() {
   const [tipsValue, setTipsValue] = useState<number>(0);
+  const [tipsError, setTipsError] = useState<boolean>(false);
   const tipsInputRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState<boolean>(false);
+  const [rating, setRating] = useState(3);
+  const [restReview, setRestReview] = useState<string>('');
+  const [waiterReview, setWaiterReview] = useState<string>('');
+  const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
 
   const suggested_tips = [300, 500, 700, 1000];
+  const suggested_compliments = ['Внимательный', 'Быстро', 'Отличные советы', 'Улыбка', 'Как дома'];
+  const payment_methods = ['СБП', 'SberPay', 'Карта'];
 
   return (
     <Page>
@@ -33,11 +43,19 @@ function GuestPage() {
         <img src={WaiterImg} alt={''} />
         <div className={'waiter-info__name'}>Артем</div>
         <div className={'waiter-info__desc'}>Официант · стол 12</div>
+        {expanded ? (
+          <div className={'waiters-message'}>
+            «Спасибо, что пришли к нам! Буду рад видеть вас снова»
+          </div>
+        ) : null}
       </div>
 
       <div className={'tips'}>
         <div className={'tips-header'}>Сумма чаевых</div>
-        <div className="tips-input-wrapper" onClick={() => tipsInputRef.current?.focus()}>
+        <div
+          className={`tips-input-wrapper ${tipsError ? 'error' : ''}`}
+          onClick={() => tipsInputRef.current?.focus()}
+        >
           <div className="tips-input__value">
             <input
               className="tips-input"
@@ -50,8 +68,18 @@ function GuestPage() {
               onChange={(event) => {
                 const digits = event.target.value.replace(/\D/g, '');
                 setTipsValue(digits ? Number(digits) : 0);
+                setTipsError(false);
               }}
-              onBlur={() => setExpanded(tipsValue > 0)}
+              onBlur={() => {
+                if (tipsValue > 0 && tipsValue < 100) {
+                  setTipsError(true);
+                  setExpanded(false);
+                  return;
+                }
+
+                setTipsError(false);
+                setExpanded(tipsValue >= 100);
+              }}
               aria-label="Сумма чаевых в рублях"
               ref={tipsInputRef}
             />
@@ -60,19 +88,30 @@ function GuestPage() {
             </span>
           </div>
         </div>
+        {tipsError ? <div className="tips-error">Минимальная сумма чаевых — 100 ₽</div> : null}
         <div className={'suggested-tips'}>
           {suggested_tips.map((el, index) => {
             return (
               <div
                 className={`tip ${tipsValue === el ? 'selected' : ''}`}
                 key={index}
-                onClick={() => setTipsValue(el)}
+                onClick={() => {
+                  setTipsValue(el);
+                  setTipsError(false);
+                  setExpanded(true);
+                }}
               >
                 {el} ₽
               </div>
             );
           })}
         </div>
+
+        {expanded ? (
+          <div className={'receipt-info'}>
+            <ReceiptIcon /> Счет {test_sum} ₽ · это {Math.floor((tipsValue / test_sum) * 100)}%
+          </div>
+        ) : null}
 
         <WaitersGoal
           goal={'Курсы бариста в Милане'}
@@ -82,11 +121,95 @@ function GuestPage() {
           expanded={expanded}
         />
       </div>
+
+      {expanded ? (
+        <>
+          <div className={'waiter-rate'}>
+            <span>Как вам визит?</span>
+            <div className="waiter-rate__stars">
+              {Array.from({ length: 5 }, (_, index) => (
+                <span
+                  key={index}
+                  onClick={() => setRating(index + 1)}
+                  className={index < rating ? 'active' : ''}
+                >
+                  <StarIon />
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className={'rest-review-header'}>
+            <span>Отзыв ресторану</span>
+            <div className={'rest-review-badge'}>
+              <EyeIcon /> видит администратор
+            </div>
+          </div>
+          <textarea
+            rows={4}
+            className={'rest-review-input'}
+            placeholder={'Оставьте отзыв о посещении ресторана...'}
+            maxLength={150}
+            value={restReview}
+            onChange={(event) => setRestReview(event.target.value)}
+          />
+          <div className={'waiter-review-header'}>
+            <span>Комплимент Артему</span>
+            <div className={'waiter-review-badge'}>
+              <PrivacyIcon /> видит только Артем
+            </div>
+          </div>
+          <div className={'suggested-compliments'}>
+            {suggested_compliments.map((el, index) => {
+              return (
+                <div
+                  className={`suggested-compliment ${selectedCompliments.includes(el) ? 'selected' : ''}`}
+                  key={index}
+                  onClick={() => {
+                    setSelectedCompliments((current) =>
+                      current.includes(el)
+                        ? current.filter((item) => item !== el)
+                        : [...current, el],
+                    );
+                  }}
+                >
+                  {el}
+                </div>
+              );
+            })}
+          </div>
+          <textarea
+            rows={4}
+            className={'waiter-review-input'}
+            placeholder={'Напишите пару ласковых слов...'}
+            maxLength={150}
+            value={waiterReview}
+            onChange={(event) => setWaiterReview(event.target.value)}
+          />
+        </>
+      ) : null}
+
       <div className={'pay-button'}>
-        <Button disabled={!tipsValue}>{tipsValue ? 'Оплатить' : 'Выберите сумму'}</Button>
+        <Button disabled={tipsValue < 100}>
+          {tipsValue ? `Оплатить ${tipsValue} ₽` : 'Выберите сумму'}
+        </Button>
       </div>
 
-      {expanded ? <>expanded</> : null}
+      {expanded ? (
+        <>
+          <div className={'payment-methods'}>
+            {payment_methods.map((el, index) => {
+              return (
+                <div key={index} className={'payment-method'}>
+                  {el}
+                </div>
+              );
+            })}
+          </div>
+          <div className={'payment-info'}>
+            Оплата через защищённый сервис. Нажимая кнопку, вы принимаете <a>условия</a>
+          </div>
+        </>
+      ) : null}
     </Page>
   );
 }

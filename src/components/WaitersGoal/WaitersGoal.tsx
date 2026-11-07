@@ -26,6 +26,12 @@ const WaitersGoal = ({ name, goal, sum, expanded, need }: WaitersGoalProps) => {
       <div className={'progress'}>
         <div className={'progress-bar'} style={{ width: `calc(${(sum / need) * 100}%)` }} />
       </div>
+      {expanded ? (
+        <div className={'progress-sum'}>
+          <span>{new Intl.NumberFormat('ru').format(sum)} ₽</span> из{' '}
+          {new Intl.NumberFormat('ru').format(need)} ₽
+        </div>
+      ) : null}
     </div>
   );
 };

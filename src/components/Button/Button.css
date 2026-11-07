@@ -19,6 +19,10 @@ button.button {
   }
 }
 
+button.button.primary:not(.disabled) {
+  box-shadow: 0 10px 24px -10px rgba(122, 74, 34, 0.7);
+}
+
 button.button.secondary {
   background: #F3E7D9;
   color: #7A4A22;

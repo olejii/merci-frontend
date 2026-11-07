@@ -38,7 +38,7 @@
     align-items: center;
     justify-content: center;
 
-    padding: 130px 28px 12px 28px;
+    padding: 130px 0 12px 0;
 
     & > img {
         width: 104px;
@@ -154,4 +154,194 @@
 
 .pay-button {
     margin-top: 32px;
+}
+
+.waiter-rate {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    background: #fff;
+    border: 1px solid #EFE3D5;
+    border-radius: 18px;
+
+    padding: 14px 16px;
+    margin-top: 10px;
+    height: 56px;
+
+    & > span {
+        font: var(--text-body);
+        font-weight: 600;
+    }
+
+    & > .waiter-rate__stars {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+
+        & > span {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 300ms ease;
+
+            & > svg {
+                width: 22px;
+                height: 21px;
+
+                & > path {
+                    transition: fill 300ms ease;
+                }
+            }
+        }
+
+        & > span.active > svg > * {
+            fill: #E0A458;
+        }
+    }
+}
+
+.rest-review-header, .waiter-review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-top: 12px;
+
+    & > span {
+        font: var(--text-body);
+        font-weight: 600;
+    }
+}
+
+.rest-review-badge, .waiter-review-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    height: 24px;
+    padding: 5px 12px;
+
+    border-radius: 99px;
+    background: #F3E7D9;
+    color: #8C7A6B;
+
+    font-size: 12px;
+}
+
+.waiter-review-badge {
+    color: #A8672E;
+}
+
+.rest-review-input, .waiter-review-input, .waiters-message {
+    margin-top: 10px;
+    resize: none;
+    width: 100%;
+
+    outline: none;
+    border: 1px solid #EFE3D5;
+    border-radius: 16px;
+
+    background: #fff;
+    padding: 12px 16px;
+
+    font: var(--text-body);
+
+    &::placeholder {
+        color: #B5A493
+    }
+}
+
+.waiters-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 24px;
+
+    width: 90%;
+}
+
+.suggested-compliments {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.suggested-compliment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 14px;
+
+    height: 34px;
+    border: 1px solid #EFE3D5;
+    border-radius: 999px;
+    background: #fff;
+
+    transition: all .3s ease;
+}
+
+.suggested-compliment.selected {
+    border: 1px solid #D9A066;
+    background: #F6E6D2;
+    color: #7A4A22;
+}
+
+.payment-methods {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.payment-method {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fff;
+    border: 1px solid #EFE3D5;
+    border-radius: 8px;
+    padding: 5px 9px;
+
+    font-size: 12px;
+    font-weight: 600;
+    color: #8C7A6B;
+}
+
+.payment-info {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #8C7A6B;
+    text-align: center;
+
+    & > a {
+        text-decoration: underline;
+    }
+}
+
+.receipt-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #8C7A6B;
+}
+
+.tips-input-wrapper.error {
+    border-color: #e53935;
+}
+
+.tips-error {
+    color: #e53935;
+    font-size: 12px;
+    line-height: 16px;
 }
