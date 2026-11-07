@@ -62,12 +62,11 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("POSTGRES_DB")
-            or os.environ.get("POSTGRES_DATABASE", "tatarstan_tips"),
-            "USER": os.environ.get("POSTGRES_USER", "postgres"),
-            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
-            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "NAME": os.environ.get("PG_DATABASE", "tatarstan_tips"),
+            "USER": os.environ.get("PG_USER", "postgres"),
+            "PASSWORD": os.environ.get("PG_PASSWORD", ""),
+            "HOST": os.environ.get("PG_HOST", "localhost"),
+            "PORT": os.environ.get("PG_PORT", "5432"),
             "OPTIONS": {
                 "sslmode": os.environ.get("POSTGRES_SSLMODE", "require"),
             },
