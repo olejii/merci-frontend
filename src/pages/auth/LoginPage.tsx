@@ -1,7 +1,8 @@
-import { useAuthStore } from 'src/stores';
+import { useNavigate } from 'react-router-dom';
+import { Page } from 'src/components/layouts';
 
 function LoginPage() {
-  const login = useAuthStore((state) => state.login);
+  /*const login = useAuthStore((state) => state.login);
 
   const handleAdminLogin = () => {
     login({
@@ -17,13 +18,18 @@ function LoginPage() {
       name: 'Официант',
       role: 'waiter',
     });
-  };
+  };*/
+
+  const navigate = useNavigate();
 
   return (
-    <div>
-      <button onClick={handleAdminLogin}>Войти как администратор</button>
-      <button onClick={handleWaiterLogin}>Войти как официант</button>
-    </div>
+    <Page>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <button onClick={() => navigate('/tip/1', { replace: true })}>
+          click to navigate /tip/1
+        </button>
+      </div>
+    </Page>
   );
 }
 

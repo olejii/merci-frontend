@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 
 import { LoginPage } from 'src/pages/auth';
-import { GuestPage } from 'src/pages/guest';
+import { GuestPage, SuccessPage } from 'src/pages/guest';
 import { WaiterPage } from 'src/pages/waiter';
 import { AdminPage } from 'src/pages/admin';
 import NotFoundPage from 'src/pages/NotFoundPage';
@@ -18,7 +18,14 @@ const router = createBrowserRouter([
   },
   {
     path: '/tip/:hash',
-    element: <GuestPage />,
+    children: [
+      { path: '/tip/:hash', element: <GuestPage /> },
+      { path: '/tip/:hash/success', element: <SuccessPage /> },
+    ],
+  },
+  {
+    path: '/success',
+    element: <SuccessPage />,
   },
   {
     path: '/waiter',

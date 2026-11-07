@@ -31,8 +31,13 @@
   align-items: center;
   justify-content: start;
 
-  & > * {
+  & > *:not(.goal-body) {
     flex-shrink: 0;
+  }
+
+  .goal-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -70,11 +75,11 @@
 
 .goal-percentage {
   line-height: normal !important;
-  width: 42px;
   height: 42px;
   display: flex;
   justify-content: center;
   align-items: center;
+  white-space: nowrap;
 }
 
 .progress {
@@ -82,6 +87,9 @@
   width: 100%;
   background: rgba(255, 246, 236, 0.45);
   border-radius: 9px;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
 }
 
 .progress-bar {

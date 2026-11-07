@@ -1,1 +1,2 @@
-export { default as GuestPage } from './GuestPage';
+export * from './GuestPage';
+export * from './SuccessPage';

@@ -6,3 +6,7 @@ export { default as EyeIcon } from './eye-icon.svg?react';
 export { default as PrivacyIcon } from './privacy-icon.svg?react';
 export { default as ReceiptIcon } from './receipt.svg?react';
 export { default as CloseIcon } from './close.svg?react';
+export { default as HeartIcon } from './heart.svg?react';
+export { default as HeartOutlineIcon } from './heart_outline.svg?react';
+export { default as ReviewIcon } from './review.svg?react';
+export { default as CheckIcon } from './check.svg?react';

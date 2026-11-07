@@ -22,7 +22,7 @@ function GuestPage() {
   const [restReview, setRestReview] = useState<string>('');
   const [waiterReview, setWaiterReview] = useState<string>('');
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(true);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const suggested_tips = [300, 500, 700, 1000];
   const suggested_compliments = ['Внимательный', 'Быстро', 'Отличные советы', 'Улыбка', 'Как дома'];
@@ -117,11 +117,12 @@ function GuestPage() {
         ) : null}
 
         <WaitersGoal
+          className={'waiters-goal-guest'}
           goal={'Курсы бариста в Милане'}
           name={'Артема'}
           need={50000}
           sum={32000}
-          expanded={expanded}
+          mode={expanded ? 'expanded' : 'default'}
         />
       </div>
 
@@ -216,7 +217,18 @@ function GuestPage() {
 
       {isPaymentModalOpen && (
         <PaymentModal
-          info={{ waiterName: 'Артем', waiterPhoto: WaiterImg, spot: 'Вкус-Сервис · Покровка' }}
+          info={{
+            waiterName: 'Артем',
+            waiterPhoto: WaiterImg,
+            spot: 'Вкус-Сервис · Покровка',
+            complimentLeft: waiterReview.length > 0,
+            restaurantComplimentLeft: restReview.length > 0,
+            goal: {
+              name: 'Курсы бариста в Милане',
+              collectedAmount: 32000,
+              targetAmount: 50000,
+            },
+          }}
           amount={tipsValue}
           onClose={() => setIsPaymentModalOpen(false)}
         />

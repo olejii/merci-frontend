@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { usePaymentStore } from 'src/stores';
 import './PaymentModal.css';
 import { Button } from 'src/components';
 import { CloseIcon, PrivacyIcon } from 'src/assets/icons';
@@ -14,10 +16,20 @@ interface PaymentModalProps {
     waiterName: string;
     spot: string;
     waiterPhoto: string;
+    goal: {
+      name: string;
+      collectedAmount: number;
+      targetAmount: number;
+    };
+    complimentLeft: boolean;
+    restaurantComplimentLeft: boolean;
   };
 }
 
 function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
+  const navigate = useNavigate();
+  const { hash } = useParams<{ hash: string }>();
+  const setPaymentResult = usePaymentStore((state) => state.setPaymentResult);
   const [isClosing, setIsClosing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
@@ -83,6 +95,22 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
     { name: 'Банковская карта', description: 'Visa, Mastercard, МИР', icon: CardImg },
     { name: 'SberPay', description: 'Оплата в СберБанк Онлайн', icon: SberPayImg },
   ];
+
+  const handlePayment = () => {
+    if (!hash) return;
+
+    setPaymentResult({
+      waiterName: info.waiterName,
+      waiterPhoto: info.waiterPhoto,
+      amount,
+      goal: info.goal,
+      complimentLeft: info.complimentLeft,
+      restaurantReviewLeft: info.restaurantComplimentLeft,
+    });
+
+    onClose();
+    navigate(`/tip/${hash}/success`);
+  };
 
   return (
     <div
@@ -156,7 +184,7 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
           </div>
         </div>
 
-        <Button>Оплатить {amount + Math.floor(amount * 0.05)} ₽</Button>
+        <Button onClick={handlePayment}>Оплатить {amount + Math.floor(amount * 0.05)} ₽</Button>
         <div className={'payment-info-security'}>
           <PrivacyIcon /> Данные карты не передаются ресторану
         </div>
