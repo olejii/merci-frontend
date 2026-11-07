@@ -13,6 +13,9 @@ button.button {
   outline: none;
   padding: 0;
   flex-shrink: 0;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 
   transition: all 0.3s ease;
   &:active {
