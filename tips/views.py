@@ -14,12 +14,11 @@ from django.db import transaction
 from django.db.models import Avg, Sum
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from .models import AuditEvent, Employee, Merchant, Payment, TipGoal, TipReport, UserProfile
+from .models import AuditEvent, Employee, Merchant, Payment, QRLink, TipGoal, TipReport, UserProfile
 from .services import (
     DomainError,
     _id,
@@ -98,9 +97,12 @@ def health(request):
 
 
 @require_http_methods(["GET"])
-@ensure_csrf_cookie
+@json_endpoint
 def pay_page(request):
-    return render(request, "tips/pay.html")
+    qr_id = request.GET.get("qr")
+    if not qr_id:
+        raise DomainError("INVALID_QR", "Укажите идентификатор QR", 422)
+    return _qr_info(qr_id)
 
 
 @require_http_methods(["POST"])
@@ -372,8 +374,10 @@ def close_tip_goal(request, goal_id):
 @require_http_methods(["GET"])
 @json_endpoint
 def get_qr(request, qr_id):
-    from .models import QRLink
+    return _qr_info(qr_id)
 
+
+def _qr_info(qr_id):
     qr = QRLink.objects.select_related("merchant", "employee").filter(pk=qr_id).first()
     if qr is None:
         raise DomainError("INVALID_QR", "QR не найден", 404)

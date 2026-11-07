@@ -189,13 +189,21 @@ class TipsApiTests(TestCase):
         self.assertEqual(body["employee_name"], "Анна")
         self.assertNotIn("base_amount", body)
 
-    def test_payment_page_sets_csrf_cookie_and_renders_flow(self):
+    def test_payment_link_returns_qr_data_json_and_csrf_protects_payment(self):
         client = Client(enforce_csrf_checks=True)
-        response = client.get("/pay/?qr=qr_001")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("screen-choice", response.content.decode("utf-8"))
-        self.assertIn("csrftoken", client.cookies)
         qr = self.make_qr()
+        csrf_response = client.get("/health")
+        self.assertEqual(csrf_response.status_code, 200)
+        self.assertIn("csrftoken", client.cookies)
+
+        response = client.get("/pay/?qr={}".format(qr.qr_id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertEqual(response.json()["qr_id"], qr.qr_id)
+        self.assertEqual(response.json()["payment_url"], "http://testserver/pay/?qr={}".format(qr.qr_id))
+        self.assertIn("tip_options", response.json())
+        self.assertIn("payment_methods", response.json())
+
         created = client.post(
             "/api/v1/tips",
             data={
@@ -209,6 +217,15 @@ class TipsApiTests(TestCase):
             HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
         )
         self.assertEqual(created.status_code, 201)
+
+    def test_payment_link_requires_a_valid_qr(self):
+        missing_qr = self.client.get("/pay/")
+        self.assertEqual(missing_qr.status_code, 422)
+        self.assertEqual(missing_qr.json()["error_code"], "INVALID_QR")
+
+        unknown_qr = self.client.get("/pay/?qr=qr_missing")
+        self.assertEqual(unknown_qr.status_code, 404)
+        self.assertEqual(unknown_qr.json()["error_code"], "INVALID_QR")
 
     def test_custom_tip_amount_is_exact_and_capped(self):
         qr = self.make_qr()
