@@ -94,6 +94,11 @@
   color: #a8672e;
 }
 
+.success-body-info__item:last-child > svg {
+  width: 18px;
+  height: 18px;
+}
+
 .success-body-info__item:last-child > svg > * {
   stroke: #a8672e;
 }

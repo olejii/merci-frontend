@@ -8,7 +8,7 @@ button.button {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: default;
+  cursor: pointer;
   border: none;
   outline: none;
   padding: 0;
@@ -40,6 +40,7 @@ button.button.outline {
 button.button.disabled {
   background: #d8c6b2;
   color: #fff;
+  cursor: not-allowed;
 
   &:active {
     scale: 1;

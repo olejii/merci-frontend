@@ -9,6 +9,12 @@
   z-index: -1;
 }
 
+@media (min-width: 500px) {
+  .background-img {
+    display: none;
+  }
+}
+
 .guest-header {
   display: flex;
   justify-content: space-between;
@@ -133,6 +139,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
+  cursor: pointer;
+
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 
   background: #fff;
   border: 1px solid #efe3d5;
@@ -300,6 +312,12 @@
   justify-content: center;
 
   padding: 0 14px;
+
+  cursor: pointer;
+
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 
   height: 34px;
   border: 1px solid #efe3d5;
