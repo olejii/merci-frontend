@@ -24,23 +24,17 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = os.environ.get(
-    "CORS_ALLOW_ALL_ORIGINS",
-    "1" if DEBUG else "0",
-) == "1"
-CORS_ALLOW_CREDENTIALS = os.environ.get(
-    "CORS_ALLOW_CREDENTIALS",
-    "1" if DEBUG else "0",
-) == "1"
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")

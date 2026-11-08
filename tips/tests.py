@@ -227,7 +227,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(unknown_qr.status_code, 404)
         self.assertEqual(unknown_qr.json()["error_code"], "INVALID_QR")
 
-    @override_settings(CORS_ALLOW_ALL_ORIGINS=True, CORS_ALLOW_CREDENTIALS=True)
+    @override_settings(SECURE_SSL_REDIRECT=True)
     def test_cors_allows_any_origin_and_credentialed_preflight(self):
         origin = "https://frontend.example"
         response = self.client.get("/health", HTTP_ORIGIN=origin)
