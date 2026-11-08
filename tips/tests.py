@@ -227,6 +227,24 @@ class TipsApiTests(TestCase):
         self.assertEqual(unknown_qr.status_code, 404)
         self.assertEqual(unknown_qr.json()["error_code"], "INVALID_QR")
 
+    @override_settings(CORS_ALLOW_ALL_ORIGINS=True, CORS_ALLOW_CREDENTIALS=True)
+    def test_cors_allows_any_origin_and_credentialed_preflight(self):
+        origin = "https://frontend.example"
+        response = self.client.get("/health", HTTP_ORIGIN=origin)
+        self.assertEqual(response["Access-Control-Allow-Origin"], origin)
+        self.assertEqual(response["Access-Control-Allow-Credentials"], "true")
+
+        preflight = self.client.options(
+            "/api/v1/tips",
+            HTTP_ORIGIN=origin,
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type,x-csrftoken",
+        )
+        self.assertEqual(preflight.status_code, 200)
+        self.assertEqual(preflight["Access-Control-Allow-Origin"], origin)
+        self.assertIn("POST", preflight["Access-Control-Allow-Methods"])
+        self.assertIn("x-csrftoken", preflight["Access-Control-Allow-Headers"])
+
     def test_custom_tip_amount_is_exact_and_capped(self):
         qr = self.make_qr()
         response = self.create_payment(qr, "custom-amount-idempotency-key", tip_amount="12.34")
