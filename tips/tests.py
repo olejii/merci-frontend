@@ -195,6 +195,8 @@ class TipsApiTests(TestCase):
         qr = self.make_qr()
         csrf_response = client.get("/health")
         self.assertEqual(csrf_response.status_code, 200)
+        self.assertEqual(csrf_response.json()["status"], "ok")
+        self.assertTrue(csrf_response.json()["csrfToken"])
         self.assertIn("csrftoken", client.cookies)
 
         response = client.get("/pay/?qr={}".format(qr.qr_id))
@@ -215,7 +217,7 @@ class TipsApiTests(TestCase):
                 "idempotency_key": "csrf-protected-test-key",
             },
             content_type="application/json",
-            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+            HTTP_X_CSRFTOKEN=csrf_response.json()["csrfToken"],
             HTTP_ORIGIN="http://localhost:8000",
         )
         self.assertEqual(created.status_code, 201)

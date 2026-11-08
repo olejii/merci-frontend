@@ -14,6 +14,7 @@ from django.db import transaction
 from django.db.models import Avg, Sum
 from django.db.models.functions import TruncDate
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
@@ -93,7 +94,7 @@ def staff_member(request):
 @require_http_methods(["GET"])
 @ensure_csrf_cookie
 def health(request):
-    return JsonResponse({"status": "ok"})
+    return JsonResponse({"status": "ok", "csrfToken": get_token(request)})
 
 
 @require_http_methods(["GET"])
