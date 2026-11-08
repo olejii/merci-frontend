@@ -37,7 +37,11 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    for origin in (
+        "http://localhost:8000,http://127.0.0.1:8000,"
+        "https://tatarstaninnovation-llc-backend.vercel.app,"
+        + os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+    ).split(",")
     if origin.strip()
 ]
 

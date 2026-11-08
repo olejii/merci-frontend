@@ -189,6 +189,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(body["employee_name"], "Анна")
         self.assertNotIn("base_amount", body)
 
+    @override_settings(CSRF_TRUSTED_ORIGINS=["http://localhost:8000"])
     def test_payment_link_returns_qr_data_json_and_csrf_protects_payment(self):
         client = Client(enforce_csrf_checks=True)
         qr = self.make_qr()
@@ -215,6 +216,7 @@ class TipsApiTests(TestCase):
             },
             content_type="application/json",
             HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+            HTTP_ORIGIN="http://localhost:8000",
         )
         self.assertEqual(created.status_code, 201)
 
