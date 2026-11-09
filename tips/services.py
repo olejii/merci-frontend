@@ -231,10 +231,10 @@ def serialize_qr(qr):
         "employee_role": qr.employee.role,
         "employee_role_label": qr.employee.get_role_display(),
         "currency": qr.currency,
-        "tip_options": settings.TIP_OPTIONS,
-        "compliment_options": [{"value": value, "label": label} for value, label in Payment.Compliment.choices],
-        "payment_methods": [{"value": value, "label": label} for value, label in Payment.Method.choices],
-        "service_fee_amount": settings.SERVICE_FEE_AMOUNT,
+        # "tip_options": settings.TIP_OPTIONS,
+        # "compliment_options": [{"value": value, "label": label} for value, label in Payment.Compliment.choices],
+        # "payment_methods": [{"value": value, "label": label} for value, label in Payment.Method.choices],
+        # "service_fee_amount": settings.SERVICE_FEE_AMOUNT,
         "active_goals": [
             {
                 "goal_id": goal.goal_id,
@@ -249,8 +249,8 @@ def serialize_qr(qr):
             for goal in qr.employee.tip_goals.filter(is_active=True).order_by("-created_at")
         ],
         "payment_url": payment_url,
-        "qr_image_url": "{}/api/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
-        "qr_image_svg_base64": make_qr_image(payment_url),
+        # "qr_image_url": "{}/api/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
+        # "qr_image_svg_base64": make_qr_image(payment_url),
         "exp": qr.expires_at.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     }
 
