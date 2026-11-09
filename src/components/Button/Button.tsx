@@ -9,10 +9,17 @@ type ButtonProps = {
   disabled?: boolean;
 };
 
-const Button: React.FC<ButtonProps> = ({ children, type, className, onClick, disabled }) => {
+const Button: React.FC<ButtonProps> = ({
+  children,
+  type,
+  className,
+  onClick,
+  disabled = false,
+}) => {
   const buttonType = type || 'primary';
   return (
     <button
+      disabled={disabled}
       onClick={!disabled ? onClick : undefined}
       className={`button ${buttonType} ${className} ${disabled ? 'disabled' : ''}`}
     >
