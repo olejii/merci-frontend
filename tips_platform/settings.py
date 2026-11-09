@@ -47,7 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in (
         "http://localhost:8000,http://127.0.0.1:8000,"
         "http://155.212.245.37:8080,"
-        "https://tatarllc.ru,"
+        "https://tatarllc.space,"
         + os.environ.get("CSRF_TRUSTED_ORIGINS", "")
     ).split(",")
     if origin.strip()
