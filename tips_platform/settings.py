@@ -46,7 +46,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in (
         "http://localhost:8000,http://127.0.0.1:8000,"
-        "155.212.245.37:8080,"
+        "http://155.212.245.37:8080,"
         "https://tatarstaninnovation-llc-backend.vercel.app,"
         + os.environ.get("CSRF_TRUSTED_ORIGINS", "")
     ).split(",")
