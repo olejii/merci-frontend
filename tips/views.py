@@ -457,7 +457,7 @@ def employee_photo(request, qr_id):
     return JsonResponse(
         {
             "employee_id": qr.employee_id,
-            "employee_photo_url": "{}/api/v1/qr/{}/employee-photo".format(
+            "employee_photo_url": "{}/v1/qr/{}/employee-photo".format(
                 settings.PUBLIC_BASE_URL,
                 qr.qr_id,
             ),

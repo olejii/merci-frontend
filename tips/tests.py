@@ -80,7 +80,7 @@ class TipsApiTests(TestCase):
         }
         body.update(extra)
         return self.client.post(
-            "/api/v1/tips",
+            "/v1/tips",
             data=body,
             content_type="application/json",
         )
@@ -96,7 +96,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(payment.employee_net_amount, Decimal("31.21"))
         with patch("tips.services._gateway_result", return_value=(Payment.Status.SUCCESS, "")):
             confirmed = self.client.post(
-                "/api/v1/payments/{}/confirm".format(payment.payment_id),
+                "/v1/payments/{}/confirm".format(payment.payment_id),
                 data={"confirm_token": response.json()["confirm_token"]},
                 content_type="application/json",
             )
@@ -114,7 +114,7 @@ class TipsApiTests(TestCase):
         created = self.create_payment(qr, "decline-idempotency-key")
         payment = Payment.objects.get(pk=created.json()["payment_id"])
         confirmed = self.client.post(
-            "/api/v1/payments/{}/confirm".format(payment.payment_id),
+            "/v1/payments/{}/confirm".format(payment.payment_id),
             data={"confirm_token": created.json()["confirm_token"]},
             content_type="application/json",
         )
@@ -147,7 +147,7 @@ class TipsApiTests(TestCase):
         created = self.create_payment(qr)
         payment_id = created.json()["payment_id"]
         canceled = self.client.post(
-            "/api/v1/payments/{}/cancel".format(payment_id),
+            "/v1/payments/{}/cancel".format(payment_id),
             data={"confirm_token": created.json()["confirm_token"]},
             content_type="application/json",
         )
@@ -157,7 +157,7 @@ class TipsApiTests(TestCase):
         pending_payment = self.create_payment(qr2, "cancel-pending-idempotency-key")
         with patch("tips.services._gateway_result", return_value=(Payment.Status.PENDING, "GATEWAY_TIMEOUT")):
             confirmed = self.client.post(
-                "/api/v1/payments/{}/confirm".format(pending_payment.json()["payment_id"]),
+                "/v1/payments/{}/confirm".format(pending_payment.json()["payment_id"]),
                 data={"confirm_token": pending_payment.json()["confirm_token"]},
                 content_type="application/json",
             )
@@ -168,7 +168,7 @@ class TipsApiTests(TestCase):
             .exists()
         )
         rejected = self.client.post(
-            "/api/v1/payments/{}/cancel".format(pending_payment.json()["payment_id"]),
+            "/v1/payments/{}/cancel".format(pending_payment.json()["payment_id"]),
             data={"confirm_token": pending_payment.json()["confirm_token"]},
             content_type="application/json",
         )
@@ -177,13 +177,13 @@ class TipsApiTests(TestCase):
 
     def test_expired_qr_returns_gone(self):
         qr = self.make_qr(hours=-1)
-        response = self.client.get("/api/v1/qr/{}".format(qr.qr_id))
+        response = self.client.get("/v1/qr/{}".format(qr.qr_id))
         self.assertEqual(response.status_code, 410)
         self.assertEqual(response.json()["error_code"], "QR_EXPIRED")
 
     def test_owner_can_generate_signed_qr_with_payment_link(self):
         response = self.client.post(
-            "/api/v1/qr",
+            "/v1/qr",
             data={"employee_id": "e_001"},
             content_type="application/json",
         )
@@ -192,7 +192,7 @@ class TipsApiTests(TestCase):
         qr = QRLink.objects.get(pk=body["qr_id"])
         self.assertTrue(body["payment_url"].endswith("?qr={}".format(qr.qr_id)))
         self.assertTrue(body["qr_image_svg_base64"])
-        self.assertEqual(body["qr_image_url"], "http://testserver/api/v1/qr/{}/image".format(qr.qr_id))
+        self.assertEqual(body["qr_image_url"], "http://testserver/v1/qr/{}/image".format(qr.qr_id))
         svg = ET.fromstring(base64.b64decode(body["qr_image_svg_base64"]))
         self.assertEqual(svg.get("width"), "196px")
         self.assertEqual(svg.get("height"), "196px")
@@ -222,7 +222,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(body["employee_name"], "Анна")
         self.assertNotIn("base_amount", body)
 
-        image_response = self.client.get("/api/v1/qr/{}/image".format(qr.qr_id))
+        image_response = self.client.get("/v1/qr/{}/image".format(qr.qr_id))
         self.assertEqual(image_response.status_code, 200)
         self.assertEqual(image_response["Content-Type"], "image/png")
         image = Image.open(io.BytesIO(image_response.content))
@@ -231,7 +231,7 @@ class TipsApiTests(TestCase):
 
     def test_employee_photo_returns_png_placeholder_and_accepts_png_upload(self):
         qr = self.make_qr()
-        photo_url = "/api/v1/qr/{}/employee-photo".format(qr.qr_id)
+        photo_url = "/v1/qr/{}/employee-photo".format(qr.qr_id)
 
         placeholder = self.client.get(photo_url)
         self.assertEqual(placeholder.status_code, 200)
@@ -254,7 +254,7 @@ class TipsApiTests(TestCase):
 
     def test_qr_returns_compliments_and_payment_persists_multiple_choices(self):
         qr = self.make_qr()
-        qr_response = self.client.get("/api/v1/qr/{}".format(qr.qr_id))
+        qr_response = self.client.get("/v1/qr/{}".format(qr.qr_id))
         self.assertEqual(qr_response.status_code, 200)
         self.assertEqual(
             {option["value"] for option in qr_response.json()["compliment_options"]},
@@ -262,7 +262,7 @@ class TipsApiTests(TestCase):
         )
         self.assertEqual(
             qr_response.json()["employee_photo_url"],
-            "http://testserver/api/v1/qr/{}/employee-photo".format(qr.qr_id),
+            "http://testserver/v1/qr/{}/employee-photo".format(qr.qr_id),
         )
 
         response = self.create_payment(
@@ -295,7 +295,7 @@ class TipsApiTests(TestCase):
         self.assertIn("payment_methods", response.json())
 
         created = client.post(
-            "/api/v1/tips",
+            "/v1/tips",
             data={
                 "qr_id": qr.qr_id,
                 "tip_amount": "31.85",
@@ -326,7 +326,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(response["Access-Control-Allow-Credentials"], "true")
 
         preflight = self.client.options(
-            "/api/v1/tips",
+            "/v1/tips",
             HTTP_ORIGIN=origin,
             HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
             HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type,x-csrftoken",
@@ -347,7 +347,7 @@ class TipsApiTests(TestCase):
 
     def test_owner_invites_employee_and_employee_accepts_invitation(self):
         invitation = self.client.post(
-            "/api/v1/employees",
+            "/v1/employees",
             data={
                 "name": "Иван",
                 "email": "ivan@example.com",
@@ -363,7 +363,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(employee.payment_details, "****4567")
         self.assertNotEqual(employee.invite_token_hash, body["invite_token"])
         accepted = self.client.post(
-            "/api/v1/employees/{}/accept".format(employee.employee_id),
+            "/v1/employees/{}/accept".format(employee.employee_id),
             data={"invite_token": body["invite_token"], "password": "valid-password-456"},
             content_type="application/json",
         )
@@ -383,7 +383,7 @@ class TipsApiTests(TestCase):
         day = timezone.localdate().isoformat()
 
         merchant_report = self.client.get(
-            "/api/v1/reports/tips",
+            "/v1/reports/tips",
             {"merchant_id": "m_001", "from": day, "to": day},
         )
         self.assertEqual(merchant_report.status_code, 200)
@@ -392,14 +392,14 @@ class TipsApiTests(TestCase):
         self.assertEqual(merchant_report.json()["success_rate"], 1.0)
 
         daily_report = self.client.get(
-            "/api/v1/reports/tips/daily",
+            "/v1/reports/tips/daily",
             {"merchant_id": "m_001", "from": day, "to": day},
         )
         self.assertEqual(daily_report.json()["daily"][0]["tips_total"], "31.85")
 
         self.client.force_login(self.employee.user)
         employee_report = self.client.get(
-            "/api/v1/reports/tips",
+            "/v1/reports/tips",
             {"employee_id": "e_001", "from": day, "to": day},
         )
         self.assertEqual(employee_report.status_code, 200)
@@ -407,7 +407,7 @@ class TipsApiTests(TestCase):
 
     def test_fee_ratings_compliment_and_goal_are_recorded_and_progress_updates(self):
         create_goal = self.client.post(
-            "/api/v1/goals",
+            "/v1/goals",
             data={
                 "employee_id": self.employee.employee_id,
                 "title": "Новый кофейный аппарат",
@@ -419,7 +419,7 @@ class TipsApiTests(TestCase):
         self.assertEqual(create_goal.status_code, 201)
         goal_id = create_goal.json()["goal_id"]
         qr = self.make_qr()
-        qr_data = self.client.get("/api/v1/qr/{}".format(qr.qr_id)).json()
+        qr_data = self.client.get("/v1/qr/{}".format(qr.qr_id)).json()
         self.assertEqual(qr_data["active_goals"][0]["goal_id"], goal_id)
         self.assertEqual(qr_data["active_goals"][0]["collected_amount"], "0.00")
         self.assertEqual(qr_data["employee_role"], Employee.Role.WAITER)
@@ -449,7 +449,7 @@ class TipsApiTests(TestCase):
 
         with patch("tips.services._gateway_result", return_value=(Payment.Status.SUCCESS, "")):
             confirmed = self.client.post(
-                "/api/v1/payments/{}/confirm".format(payment.payment_id),
+                "/v1/payments/{}/confirm".format(payment.payment_id),
                 data={"confirm_token": response.json()["confirm_token"]},
                 content_type="application/json",
             )
@@ -461,7 +461,7 @@ class TipsApiTests(TestCase):
     def test_bank_commission_rates_and_payer_options(self):
         rates = {"SBP": Decimal("2.00"), "CARD": Decimal("5.00"), "SBERPAY": Decimal("5.00")}
         qr_response = self.client.post(
-            "/api/v1/qr",
+            "/v1/qr",
             data={"employee_id": self.employee.employee_id},
             content_type="application/json",
         )
@@ -539,7 +539,7 @@ class TipsApiTests(TestCase):
 
     def test_merchant_registration_requires_phone_and_creates_profile(self):
         response = self.client.post(
-            "/api/v1/merchants/register",
+            "/v1/merchants/register",
             data={
                 "name": "Новое кафе",
                 "email": "new-merchant@example.com",
@@ -570,7 +570,7 @@ class TipsApiTests(TestCase):
 
     def test_merchant_registration_rejects_duplicate_email_case_insensitively(self):
         response = self.client.post(
-            "/api/v1/merchants/register",
+            "/v1/merchants/register",
             data={
                 "name": "Кафе-дубликат",
                 "email": "OWNER@EXAMPLE.COM",

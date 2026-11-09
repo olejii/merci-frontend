@@ -260,7 +260,7 @@ def serialize_qr(qr):
             for goal in qr.employee.tip_goals.filter(is_active=True).order_by("-created_at")
         ],
         "payment_url": payment_url,
-        "employee_photo_url": "{}/api/v1/qr/{}/employee-photo".format(
+        "employee_photo_url": "{}/v1/qr/{}/employee-photo".format(
             settings.PUBLIC_BASE_URL,
             qr.qr_id,
         ),
@@ -268,7 +268,7 @@ def serialize_qr(qr):
             {"value": value, "label": label}
             for value, label in Payment.Compliment.choices
         ],
-        # "qr_image_url": "{}/api/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
+        # "qr_image_url": "{}/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
         # "qr_image_svg_base64": make_qr_image(payment_url),
         "exp": qr.expires_at.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     }

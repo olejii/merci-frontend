@@ -498,7 +498,7 @@ export class Api<
      *
      * @name V1AuthLoginCreate
      * @summary Вход сотрудника или владельца мерчанта
-     * @request POST:/api/v1/auth/login
+     * @request POST:/v1/auth/login
      */
     v1AuthLoginCreate: (
       data: {
@@ -519,7 +519,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/auth/login`,
+        path: `/v1/auth/login`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -532,7 +532,7 @@ export class Api<
      *
      * @name V1AuthLogoutCreate
      * @summary Выход из учётной записи
-     * @request POST:/api/v1/auth/logout
+     * @request POST:/v1/auth/logout
      * @secure
      */
     v1AuthLogoutCreate: (params: RequestParams = {}) =>
@@ -542,7 +542,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/auth/logout`,
+        path: `/v1/auth/logout`,
         method: "POST",
         secure: true,
         format: "json",
@@ -554,7 +554,7 @@ export class Api<
      *
      * @name V1MerchantsRegisterCreate
      * @summary Подать заявку на регистрацию мерчанта
-     * @request POST:/api/v1/merchants/register
+     * @request POST:/v1/merchants/register
      */
     v1MerchantsRegisterCreate: (
       data: {
@@ -588,7 +588,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/merchants/register`,
+        path: `/v1/merchants/register`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -601,7 +601,7 @@ export class Api<
      *
      * @name V1EmployeesCreate
      * @summary Пригласить сотрудника в заведение
-     * @request POST:/api/v1/employees
+     * @request POST:/v1/employees
      * @secure
      */
     v1EmployeesCreate: (
@@ -628,7 +628,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/employees`,
+        path: `/v1/employees`,
         method: "POST",
         body: data,
         secure: true,
@@ -642,7 +642,7 @@ export class Api<
      *
      * @name V1EmployeesAcceptCreate
      * @summary Принять приглашение сотрудника
-     * @request POST:/api/v1/employees/{employee_id}/accept
+     * @request POST:/v1/employees/{employee_id}/accept
      */
     v1EmployeesAcceptCreate: (
       employeeId: string,
@@ -663,7 +663,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/employees/${employeeId}/accept`,
+        path: `/v1/employees/${employeeId}/accept`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -676,7 +676,7 @@ export class Api<
      *
      * @name V1QrCreate
      * @summary Создать подписанный QR и платёжную ссылку
-     * @request POST:/api/v1/qr
+     * @request POST:/v1/qr
      * @secure
      */
     v1QrCreate: (
@@ -686,7 +686,7 @@ export class Api<
       params: RequestParams = {},
     ) =>
       this.request<QRResponse, Error>({
-        path: `/api/v1/qr`,
+        path: `/v1/qr`,
         method: "POST",
         body: data,
         secure: true,
@@ -700,11 +700,11 @@ export class Api<
      *
      * @name V1QrDetail
      * @summary Данные QR для формы чаевых
-     * @request GET:/api/v1/qr/{qr_id}
+     * @request GET:/v1/qr/{qr_id}
      */
     v1QrDetail: (qrId: string, params: RequestParams = {}) =>
       this.request<QRResponse, Error>({
-        path: `/api/v1/qr/${qrId}`,
+        path: `/v1/qr/${qrId}`,
         method: "GET",
         format: "json",
         ...params,
@@ -713,11 +713,11 @@ export class Api<
     /**
      * @name V1QrImageDetail
      * @summary Скачать PNG QR-кода
-     * @request GET:/api/v1/qr/{qr_id}/image
+     * @request GET:/v1/qr/{qr_id}/image
      */
     v1QrImageDetail: (qrId: string, params: RequestParams = {}) =>
       this.request<Blob, Blob>({
-        path: `/api/v1/qr/${qrId}/image`,
+        path: `/v1/qr/${qrId}/image`,
         method: "GET",
         format: "blob",
         ...params,
@@ -726,11 +726,11 @@ export class Api<
     /**
      * @name V1QrEmployeePhotoDetail
      * @summary Получить PNG-фото сотрудника или заглушку
-     * @request GET:/api/v1/qr/{qr_id}/employee-photo
+     * @request GET:/v1/qr/{qr_id}/employee-photo
      */
     v1QrEmployeePhotoDetail: (qrId: string, params: RequestParams = {}) =>
       this.request<Blob, Blob>({
-        path: `/api/v1/qr/${qrId}/employee-photo`,
+        path: `/v1/qr/${qrId}/employee-photo`,
         method: "GET",
         format: "blob",
         ...params,
@@ -739,7 +739,7 @@ export class Api<
     /**
      * @name V1QrEmployeePhotoUpdate
      * @summary Загрузить или обновить PNG-фото сотрудника
-     * @request POST:/api/v1/qr/{qr_id}/employee-photo
+     * @request POST:/v1/qr/{qr_id}/employee-photo
      * @secure
      */
     v1QrEmployeePhotoUpdate: (
@@ -757,7 +757,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/qr/${qrId}/employee-photo`,
+        path: `/v1/qr/${qrId}/employee-photo`,
         method: "POST",
         body: data,
         secure: true,
@@ -771,11 +771,11 @@ export class Api<
      *
      * @name V1TipsCreate
      * @summary Создать платёж с чаевыми
-     * @request POST:/api/v1/tips
+     * @request POST:/v1/tips
      */
     v1TipsCreate: (data: TipCreate, params: RequestParams = {}) =>
       this.request<Payment, Error>({
-        path: `/api/v1/tips`,
+        path: `/v1/tips`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -788,7 +788,7 @@ export class Api<
      *
      * @name V1GoalsCreate
      * @summary Создать цель сбора сотрудника
-     * @request POST:/api/v1/goals
+     * @request POST:/v1/goals
      * @secure
      */
     v1GoalsCreate: (
@@ -805,7 +805,7 @@ export class Api<
       params: RequestParams = {},
     ) =>
       this.request<TipGoal, Error>({
-        path: `/api/v1/goals`,
+        path: `/v1/goals`,
         method: "POST",
         body: data,
         secure: true,
@@ -819,7 +819,7 @@ export class Api<
      *
      * @name V1EmployeesGoalsList
      * @summary Список целей сотрудника
-     * @request GET:/api/v1/employees/{employee_id}/goals
+     * @request GET:/v1/employees/{employee_id}/goals
      * @secure
      */
     v1EmployeesGoalsList: (employeeId: string, params: RequestParams = {}) =>
@@ -829,7 +829,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/employees/${employeeId}/goals`,
+        path: `/v1/employees/${employeeId}/goals`,
         method: "GET",
         secure: true,
         format: "json",
@@ -841,12 +841,12 @@ export class Api<
      *
      * @name V1GoalsCloseCreate
      * @summary Закрыть цель сбора
-     * @request POST:/api/v1/goals/{goal_id}/close
+     * @request POST:/v1/goals/{goal_id}/close
      * @secure
      */
     v1GoalsCloseCreate: (goalId: string, params: RequestParams = {}) =>
       this.request<TipGoal, Error>({
-        path: `/api/v1/goals/${goalId}/close`,
+        path: `/v1/goals/${goalId}/close`,
         method: "POST",
         secure: true,
         format: "json",
@@ -858,7 +858,7 @@ export class Api<
      *
      * @name V1PaymentsConfirmCreate
      * @summary Подтвердить платёж и запустить эмулятор шлюза
-     * @request POST:/api/v1/payments/{id}/confirm
+     * @request POST:/v1/payments/{id}/confirm
      */
     v1PaymentsConfirmCreate: (
       id: string,
@@ -868,7 +868,7 @@ export class Api<
       params: RequestParams = {},
     ) =>
       this.request<Payment, Payment | Error>({
-        path: `/api/v1/payments/${id}/confirm`,
+        path: `/v1/payments/${id}/confirm`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -881,7 +881,7 @@ export class Api<
      *
      * @name V1PaymentsCancelCreate
      * @summary Отменить платёж до подтверждения
-     * @request POST:/api/v1/payments/{id}/cancel
+     * @request POST:/v1/payments/{id}/cancel
      */
     v1PaymentsCancelCreate: (
       id: string,
@@ -891,7 +891,7 @@ export class Api<
       params: RequestParams = {},
     ) =>
       this.request<Payment, Error>({
-        path: `/api/v1/payments/${id}/cancel`,
+        path: `/v1/payments/${id}/cancel`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -904,7 +904,7 @@ export class Api<
      *
      * @name V1ReportsTipsList
      * @summary Отчёт по чаевым мерчанта
-     * @request GET:/api/v1/reports/tips
+     * @request GET:/v1/reports/tips
      * @secure
      */
     v1ReportsTipsList: (
@@ -921,7 +921,7 @@ export class Api<
       params: RequestParams = {},
     ) =>
       this.request<Report | EmployeeReport, Error>({
-        path: `/api/v1/reports/tips`,
+        path: `/v1/reports/tips`,
         method: "GET",
         query: query,
         secure: true,
@@ -934,7 +934,7 @@ export class Api<
      *
      * @name V1ReportsTipsDailyList
      * @summary Отчёт по чаевым в разрезе дней
-     * @request GET:/api/v1/reports/tips/daily
+     * @request GET:/v1/reports/tips/daily
      * @secure
      */
     v1ReportsTipsDailyList: (
@@ -962,7 +962,7 @@ export class Api<
         },
         Error
       >({
-        path: `/api/v1/reports/tips/daily`,
+        path: `/v1/reports/tips/daily`,
         method: "GET",
         query: query,
         secure: true,
