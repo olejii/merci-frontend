@@ -21,6 +21,11 @@ from qrcode.image.svg import SvgPathImage
 from .models import AuditEvent, ComplimentOption, Employee, Merchant, Payment, QRLink, TipGoal
 
 CENT = Decimal("0.01")
+BANK_FEE_PERCENTAGES = {
+    Payment.Method.SBP: 2,
+    Payment.Method.CARD: 5,
+    Payment.Method.SBERPAY: 5,
+}
 QR_IMAGE_SIZE = 196
 QR_COLOR = "#2E1E14"
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
@@ -233,8 +238,14 @@ def serialize_qr(qr):
         "currency": qr.currency,
         # "tip_options": settings.TIP_OPTIONS,
         # "compliment_options": [{"value": value, "label": label} for value, label in Payment.Compliment.choices],
-        # "payment_methods": [{"value": value, "label": label} for value, label in Payment.Method.choices],
-        # "service_fee_amount": settings.SERVICE_FEE_AMOUNT,
+        "payment_methods": [
+            {
+                "value": method,
+                "label": label,
+                "bank_fee_percent": BANK_FEE_PERCENTAGES[method],
+            }
+            for method, label in Payment.Method.choices
+        ],
         "active_goals": [
             {
                 "goal_id": goal.goal_id,
@@ -314,7 +325,8 @@ def create_payment(
     tip = _money(tip_amount, "TIP_OUT_OF_RANGE")
     if tip <= 0 or tip > Decimal("1000000"):
         raise DomainError("TIP_OUT_OF_RANGE", "Чаевые должны быть от 0.01 до 1 000 000 рублей", 422)
-    fee = Decimal("25.00") if cover_service_fee else Decimal("0.00")
+    fee_rate = Decimal(BANK_FEE_PERCENTAGES[payment_method]) / Decimal("100")
+    fee = (tip * fee_rate).quantize(CENT, rounding=ROUND_HALF_UP)
     goal = None
     if goal_id:
         goal = TipGoal.objects.filter(
@@ -357,6 +369,7 @@ def create_payment(
             or existing.tip != tip
             or existing.payment_method != payment_method
             or existing.service_fee != fee
+            or existing.cover_service_fee != cover_service_fee
             or existing.goal_id != (goal.pk if goal else None)
             or existing.service_rating != service_rating
             or existing.restaurant_rating != restaurant_rating
@@ -378,6 +391,7 @@ def create_payment(
         qr=qr,
         tip=tip,
         service_fee=fee,
+        cover_service_fee=cover_service_fee,
         payment_method=payment_method,
         goal=goal,
         service_rating=service_rating,
@@ -404,6 +418,9 @@ def payment_data(payment, confirm_token=None):
         "amount_total": str(payment.amount_total.quantize(CENT)),
         "tip_amount": str(payment.tip.quantize(CENT)),
         "service_fee_amount": str(payment.service_fee.quantize(CENT)),
+        "bank_fee_percent": BANK_FEE_PERCENTAGES.get(payment.payment_method, 0),
+        "commission_payer": "CLIENT" if payment.cover_service_fee else "EMPLOYEE",
+        "employee_net_amount": str(payment.employee_net_amount.quantize(CENT)),
         "payment_method": payment.payment_method,
         "goal_id": payment.goal_id,
         "compliments": list(payment.compliments.values_list("code", flat=True)),

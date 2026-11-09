@@ -35,6 +35,11 @@ export interface QRResponse {
   employee_role: "WAITER" | "BARTENDER" | "HOSTESS";
   employee_role_label: string;
   currency: string;
+  payment_methods: {
+    value: "SBP" | "CARD" | "SBERPAY";
+    label: string;
+    bank_fee_percent: 2 | 5;
+  }[];
   compliment_options: {
     value: "FRIENDLY" | "ATTENTIVE" | "FAST" | "PROFESSIONAL" | "HOSPITABLE";
     label: string;
@@ -54,11 +59,8 @@ export interface TipCreate {
    * @example "100.00"
    */
   tip_amount: string;
-  payment_method: "SBP" | "CARD" | "SBERPAY" | "APPLE_PAY";
-  /**
-   * Добавить к чаевым 25 ₽ комиссии сервиса
-   * @default false
-   */
+  payment_method: "SBP" | "CARD" | "SBERPAY";
+  /** true: client pays bank fee on top; false: fee is deducted from employee's tip. */
   cover_service_fee?: boolean;
   goal_id?: string | null;
   /**
@@ -106,7 +108,7 @@ export interface Payment {
   tip_amount: string;
   /** @pattern ^[0-9]+\.[0-9]{2}$ */
   service_fee_amount: string;
-  payment_method: "SBP" | "CARD" | "SBERPAY" | "APPLE_PAY";
+  payment_method: "SBP" | "CARD" | "SBERPAY";
   goal_id: string | null;
   compliments: (
     | "FRIENDLY"
@@ -115,6 +117,9 @@ export interface Payment {
     | "PROFESSIONAL"
     | "HOSPITABLE"
   )[];
+  bank_fee_percent: 2 | 5;
+  commission_payer: "CLIENT" | "EMPLOYEE";
+  employee_net_amount: string;
   confirm_token: string | null;
   error_code: string | null;
 }

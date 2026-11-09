@@ -158,7 +158,6 @@ class Payment(models.Model):
         SBP = "SBP", "СБП"
         CARD = "CARD", "Банковская карта"
         SBERPAY = "SBERPAY", "SberPay"
-        APPLE_PAY = "APPLE_PAY", "Apple Pay"
 
     class Compliment(models.TextChoices):
         FRIENDLY = "FRIENDLY", "Дружелюбие"
@@ -176,7 +175,8 @@ class Payment(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name="payments")
     qr = models.ForeignKey(QRLink, on_delete=models.PROTECT, related_name="payments")
     tip = models.DecimalField(max_digits=10, decimal_places=2)
-    service_fee = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
+    service_fee = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0.00"))
+    cover_service_fee = models.BooleanField(default=False)
     payment_method = models.CharField(max_length=10, choices=Method.choices, default=Method.SBP)
     goal = models.ForeignKey(TipGoal, null=True, blank=True, on_delete=models.SET_NULL, related_name="payments")
     service_rating = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)])
@@ -201,7 +201,7 @@ class Payment(models.Model):
             models.CheckConstraint(check=Q(tip__gt=0), name="payment_tip_positive"),
             models.CheckConstraint(check=Q(tip__lte=1000000), name="payment_tip_maximum"),
             models.CheckConstraint(
-                check=Q(service_fee__in=[Decimal("0.00"), Decimal("25.00")]),
+                check=Q(service_fee__gte=0, service_fee__lte=Decimal("50000.00")),
                 name="payment_service_fee_valid",
             ),
             models.CheckConstraint(
@@ -216,7 +216,11 @@ class Payment(models.Model):
 
     @property
     def amount_total(self):
-        return self.tip + self.service_fee
+        return self.tip + (self.service_fee if self.cover_service_fee else Decimal("0.00"))
+
+    @property
+    def employee_net_amount(self):
+        return self.tip if self.cover_service_fee else self.tip - self.service_fee
 
 
 class TipReport(models.Model):

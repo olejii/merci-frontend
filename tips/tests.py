@@ -92,6 +92,8 @@ class TipsApiTests(TestCase):
         payment = Payment.objects.get(pk=response.json()["payment_id"])
         self.assertEqual(payment.tip, Decimal("31.85"))
         self.assertEqual(payment.amount_total, Decimal("31.85"))
+        self.assertEqual(payment.service_fee, Decimal("0.64"))
+        self.assertEqual(payment.employee_net_amount, Decimal("31.21"))
         with patch("tips.services._gateway_result", return_value=(Payment.Status.SUCCESS, "")):
             confirmed = self.client.post(
                 "/api/v1/payments/{}/confirm".format(payment.payment_id),
@@ -425,7 +427,7 @@ class TipsApiTests(TestCase):
             qr,
             "goal-feature-idempotency-key",
             tip_amount="100.00",
-            payment_method="APPLE_PAY",
+            payment_method="CARD",
             cover_service_fee=True,
             goal_id=goal_id,
             service_rating=5,
@@ -436,8 +438,10 @@ class TipsApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         payment = Payment.objects.get(pk=response.json()["payment_id"])
-        self.assertEqual(payment.amount_total, Decimal("125.00"))
-        self.assertEqual(payment.payment_method, Payment.Method.APPLE_PAY)
+        self.assertEqual(payment.amount_total, Decimal("105.00"))
+        self.assertEqual(payment.service_fee, Decimal("5.00"))
+        self.assertEqual(payment.employee_net_amount, Decimal("100.00"))
+        self.assertEqual(payment.payment_method, Payment.Method.CARD)
         self.assertEqual(payment.restaurant_rating, 4)
         self.assertEqual(payment.compliment, Payment.Compliment.ATTENTIVE)
         self.assertEqual(payment.goal_id, goal_id)
@@ -453,6 +457,62 @@ class TipsApiTests(TestCase):
         goal = TipGoal.objects.get(pk=goal_id)
         self.assertEqual(goal.collected_amount, Decimal("100.00"))
         self.assertEqual(goal.progress_pct, 10)
+
+    def test_bank_commission_rates_and_payer_options(self):
+        rates = {"SBP": Decimal("2.00"), "CARD": Decimal("5.00"), "SBERPAY": Decimal("5.00")}
+        qr_response = self.client.post(
+            "/api/v1/qr",
+            data={"employee_id": self.employee.employee_id},
+            content_type="application/json",
+        )
+        self.assertEqual(qr_response.status_code, 201)
+        available_methods = {
+            method["value"]: method["bank_fee_percent"]
+            for method in qr_response.json()["payment_methods"]
+        }
+        self.assertEqual(available_methods, {"SBP": 2, "CARD": 5, "SBERPAY": 5})
+
+        for index, (method, rate) in enumerate(rates.items()):
+            for payer_index, covered_by_client in enumerate((True, False)):
+                qr_number = index * 2 + payer_index
+                qr = self.make_qr(
+                    qr_id="qr_fee_{}".format(qr_number),
+                    nonce="{:06x}".format(qr_number + 10),
+                )
+                payment_response = self.create_payment(
+                    qr,
+                    "fee-option-{}-{}".format(index, "client" if covered_by_client else "employee"),
+                    tip_amount="100.00",
+                    payment_method=method,
+                    cover_service_fee=covered_by_client,
+                )
+                self.assertEqual(payment_response.status_code, 201)
+                body = payment_response.json()
+                payment = Payment.objects.get(pk=body["payment_id"])
+                fee = Decimal("100.00") * rate / Decimal("100")
+                self.assertEqual(payment.service_fee, fee)
+                self.assertEqual(payment.amount_total, Decimal("100.00") + (fee if covered_by_client else Decimal("0.00")))
+                self.assertEqual(payment.employee_net_amount, Decimal("100.00") - (Decimal("0.00") if covered_by_client else fee))
+                self.assertEqual(body["commission_payer"], "CLIENT" if covered_by_client else "EMPLOYEE")
+                self.assertEqual(Decimal(body["employee_net_amount"]), payment.employee_net_amount)
+                conflicting_payer = self.create_payment(
+                    qr,
+                    "fee-option-{}-{}".format(index, "client" if covered_by_client else "employee"),
+                    tip_amount="100.00",
+                    payment_method=method,
+                    cover_service_fee=not covered_by_client,
+                )
+                self.assertEqual(conflicting_payer.status_code, 409)
+                self.assertEqual(conflicting_payer.json()["error_code"], "IDEMPOTENCY_CONFLICT")
+
+        invalid_qr = self.make_qr(qr_id="qr_no_apple", nonce="000020")
+        apple_pay = self.create_payment(
+            invalid_qr,
+            "apple-pay-is-disabled",
+            payment_method="APPLE_PAY",
+        )
+        self.assertEqual(apple_pay.status_code, 422)
+        self.assertEqual(apple_pay.json()["error_code"], "PAYMENT_METHOD_INVALID")
 
     def test_admin_can_create_tip_goal_without_manual_id(self):
         admin_user = User.objects.create_superuser(

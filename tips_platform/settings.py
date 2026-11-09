@@ -111,7 +111,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/admin/login/"
 
 TIP_QR_SECRET = os.environ.get("TIP_QR_SECRET", "")
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+PUBLIC_BASE_URL = os.environ.get("_", "http://localhost:8000").rstrip("/")
 QR_TTL_HOURS = 24
 TIP_OPTIONS = [50, 100, 200, 500]
-SERVICE_FEE_AMOUNT = "25.00"
