@@ -1,0 +1,594 @@
+# API платформы чаевых — кейс 3
+#
+# Контракт Django API платформы чаевых.
+
+openapi: 3.0.3
+info:
+  title: Tips Platform
+  version: "1.0.0"
+  description: Онлайн-чаевые для сети «Вкус-Сервис»
+
+servers:
+  - url: https://tatarllc.ru/
+
+# ---------- ОБРАЗЕЦ ----------
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+  schemas:
+    QRPayload:
+      type: object
+      required: [merchant_id, employee_id, nonce, exp, signature]
+      properties:
+        merchant_id: {type: string, pattern: '^m_[0-9]{3}$'}
+        employee_id: {type: string, pattern: '^e_[0-9]{3}$'}
+        nonce: {type: string, pattern: '^[a-f0-9]{6}$'}
+        exp: {type: string, format: date-time}
+        signature: {type: string, pattern: '^[a-f0-9]{16}$'}
+
+# ---------- API ----------
+    QRResponse:
+      type: object
+      required: [qr_id, merchant_id, merchant_name, employee_id, employee_name, employee_role, employee_role_label, currency, payment_methods, compliment_options, active_goals, payment_url, employee_photo_url, exp]
+      properties:
+        qr_id: {type: string, example: qr_001}
+        merchant_id: {type: string, pattern: '^m_[0-9]{3}$'}
+        merchant_name: {type: string}
+        employee_id: {type: string, pattern: '^e_[0-9]{3}$'}
+        employee_name: {type: string}
+        employee_role: {type: string, enum: [WAITER, BARTENDER, HOSTESS]}
+        employee_role_label: {type: string}
+        currency: {type: string, enum: [RUB]}
+        payment_methods:
+          type: array
+          items:
+            type: object
+            required: [value, label, bank_fee_percent]
+            properties:
+              value: {type: string, enum: [SBP, CARD, SBERPAY]}
+              label: {type: string}
+              bank_fee_percent: {type: integer, enum: [2, 5]}
+        compliment_options:
+          type: array
+          items:
+            type: object
+            required: [value, label]
+            properties:
+              value: {type: string, enum: [FRIENDLY, ATTENTIVE, FAST, PROFESSIONAL, HOSPITABLE]}
+              label: {type: string}
+        active_goals:
+          type: array
+          items: {$ref: '#/components/schemas/TipGoal'}
+        payment_url: {type: string, format: uri}
+        employee_photo_url: {type: string, format: uri, description: Публичная ссылка на PNG-фото сотрудника или PNG-заглушку}
+        exp: {type: string, format: date-time}
+
+    TipCreate:
+      type: object
+      required: [qr_id, tip_amount, payment_method, idempotency_key]
+      properties:
+        qr_id: {type: string}
+        tip_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$', example: '100.00', description: Сумма именно чаевых}
+        payment_method: {type: string, enum: [SBP, CARD, SBERPAY]}
+        cover_service_fee: {type: boolean, default: false, description: true — клиент оплачивает банковскую комиссию сверх чаевых; false — комиссия удерживается из суммы официанта}
+        goal_id: {type: string, nullable: true}
+        service_rating: {type: integer, minimum: 1, maximum: 5, nullable: true}
+        restaurant_rating: {type: integer, minimum: 1, maximum: 5, nullable: true}
+        restaurant_comment: {type: string, maxLength: 500}
+        compliments:
+          type: array
+          uniqueItems: true
+          items: {type: string, enum: [FRIENDLY, ATTENTIVE, FAST, PROFESSIONAL, HOSPITABLE]}
+        compliment: {type: string, deprecated: true, description: Устаревший одиночный вариант; используйте compliments}
+        employee_comment: {type: string, maxLength: 500}
+        idempotency_key: {type: string, minLength: 16, maxLength: 128}
+
+    Payment:
+      type: object
+      required: [payment_id, status, amount_total, tip_amount, service_fee_amount, bank_fee_percent, commission_payer, employee_net_amount, payment_method, compliments, confirm_token, error_code]
+      properties:
+        payment_id: {type: string, pattern: '^p_[0-9]{4,8}$'}
+        status: {type: string, enum: [CREATED, PENDING, SUCCESS, DECLINED, CANCELED]}
+        amount_total: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        tip_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        service_fee_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        bank_fee_percent: {type: integer, enum: [2, 5]}
+        commission_payer: {type: string, enum: [CLIENT, EMPLOYEE]}
+        employee_net_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        payment_method: {type: string, enum: [SBP, CARD, SBERPAY]}
+        goal_id: {type: string, nullable: true}
+        compliments:
+          type: array
+          items: {type: string, enum: [FRIENDLY, ATTENTIVE, FAST, PROFESSIONAL, HOSPITABLE]}
+        confirm_token: {type: string, nullable: true}
+        error_code: {type: string, nullable: true}
+
+    Report:
+      type: object
+      required: [merchant_id, period, tips_total, payments_count, avg_tip_amount, success_rate]
+      properties:
+        merchant_id: {type: string, pattern: '^m_[0-9]{3}$'}
+        period: {type: string, example: '2025-11-01-2025-11-30'}
+        tips_total: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        payments_count: {type: integer, minimum: 0}
+        avg_tip_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        success_rate: {type: number, format: double, minimum: 0, maximum: 1}
+
+    EmployeeReport:
+      type: object
+      required: [employee_id, period, tips_total, payments_count, avg_tip_amount, top_day]
+      properties:
+        employee_id: {type: string, pattern: '^e_[0-9]{3}$'}
+        period: {type: string, example: '2025-11-01-2025-11-30'}
+        tips_total: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        payments_count: {type: integer, minimum: 0}
+        avg_tip_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        top_day: {type: string, format: date, nullable: true}
+
+    TipGoal:
+      type: object
+      required: [goal_id, employee_id, title, target_amount, collected_amount, progress_pct, is_active]
+      properties:
+        goal_id: {type: string}
+        employee_id: {type: string}
+        title: {type: string}
+        description: {type: string}
+        target_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        collected_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        progress_pct: {type: integer, minimum: 0, maximum: 100}
+        is_active: {type: boolean}
+
+    Error:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code: {type: string}
+        message: {type: string}
+        retryable: {type: boolean}
+        details: {type: object, additionalProperties: true}
+
+paths:
+  /pay/:
+    get:
+      summary: Получить данные оплаты по QR
+      description: Публичный JSON API по ссылке из QR. Возвращает данные сотрудника, варианты чаевых и оплаты, цели сбора, ссылку и SVG QR в Base64. Клиентское приложение строит интерфейс и отправляет платёж через POST /api/v1/tips.
+      parameters:
+        - {name: qr, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Данные для интерфейса оплаты чаевых
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QRResponse'}
+        '403':
+          description: Мерчант заблокирован
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '404':
+          description: QR не найден
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '409':
+          description: QR уже использован
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '410':
+          description: QR истёк
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422':
+          description: QR не указан или его подпись недействительна
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+
+  # ---------- ОБРАЗЕЦ ----------
+  /health:
+    get:
+      summary: Проверка живости
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, csrfToken]
+                properties:
+                  status: {type: string}
+                  csrfToken: {type: string, description: Передавайте в заголовке X-CSRFToken для небезопасных запросов}
+
+  # ---------- API ----------
+  /api/v1/auth/login:
+    post:
+      summary: Вход сотрудника или владельца мерчанта
+      description: Получите CSRF-cookie запросом GET /health и передавайте токен в X-CSRFToken.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                password: {type: string, format: password}
+      responses:
+        '200': {description: Создана Django session cookie}
+        '401': {description: Неверный email или пароль}
+
+  /api/v1/auth/logout:
+    post:
+      summary: Выход из учётной записи
+      security: [{cookieAuth: []}]
+      responses:
+        '200': {description: Сессия закрыта}
+        '401': {description: Требуется авторизация}
+
+  /api/v1/merchants/register:
+    post:
+      summary: Подать заявку на регистрацию мерчанта
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, phone, password]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 100}
+                email: {type: string, format: email, maxLength: 254}
+                phone: {type: string, pattern: '^\+[1-9][0-9]{7,14}$'}
+                password: {type: string, minLength: 12, format: password}
+                description: {type: string, maxLength: 200}
+      responses:
+        '201': {description: Заявка создана в статусе PENDING}
+        '409': {description: Аккаунт уже существует}
+        '422': {description: Некорректные данные}
+
+  /api/v1/employees:
+    post:
+      summary: Пригласить сотрудника в заведение
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, phone, role, payout_last4]
+              properties:
+                name: {type: string, maxLength: 100}
+                email: {type: string, format: email}
+                phone: {type: string, pattern: '^\+[1-9][0-9]{7,14}$'}
+                role: {type: string, enum: [WAITER, BARTENDER, HOSTESS]}
+                payout_last4: {type: string, pattern: '^[0-9]{4}$'}
+      responses:
+        '201': {description: Создано приглашение, реквизит возвращён только в маске}
+        '401': {description: Требуется авторизация}
+        '403': {description: Недостаточно прав}
+
+  /api/v1/employees/{employee_id}/accept:
+    post:
+      summary: Принять приглашение сотрудника
+      parameters: [{name: employee_id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invite_token, password]
+              properties:
+                invite_token: {type: string}
+                password: {type: string, minLength: 12, format: password}
+      responses:
+        '200': {description: Учётная запись сотрудника активирована}
+        '403': {description: Неверный токен приглашения}
+        '410': {description: Приглашение истекло}
+
+  /api/v1/qr:
+    post:
+      summary: Создать подписанный QR и платёжную ссылку
+      description: Для сотрудника или владельца активного мерчанта; QR действует 24 часа.
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employee_id]
+              properties:
+                employee_id: {type: string}
+      responses:
+        '201':
+          description: QR и ссылка созданы
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QRResponse'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Нет прав или мерчант не активен}
+        '409':
+          description: Сотрудник не принял приглашение
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+
+  /api/v1/qr/{qr_id}:
+    get:
+      summary: Данные QR для формы чаевых
+      parameters: [{name: qr_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: QR действителен
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QRResponse'}
+        '403':
+          description: Мерчант заблокирован
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '404': {description: QR не найден}
+        '409': {description: Одноразовый QR уже использован}
+        '410':
+          description: QR истёк
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '422':
+          description: Подпись QR недействительна
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+
+  /api/v1/qr/{qr_id}/employee-photo:
+    get:
+      summary: Получить PNG-фото сотрудника или заглушку
+      parameters: [{name: qr_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: PNG-изображение сотрудника
+          content:
+            image/png:
+              schema: {type: string, format: binary}
+        '404': {description: QR не найден}
+    post:
+      summary: Загрузить или обновить PNG-фото сотрудника
+      security: [{cookieAuth: []}]
+      parameters: [{name: qr_id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: {type: string, format: binary, description: PNG, не более 5 МБ}
+      responses:
+        '200':
+          description: Ссылка на фото
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [employee_id, employee_photo_url]
+                properties:
+                  employee_id: {type: string}
+                  employee_photo_url: {type: string, format: uri}
+        '401': {description: Требуется авторизация}
+        '403': {description: Нет прав для изменения фото}
+        '422': {description: Недопустимый формат, размер или изображение}
+
+  /api/v1/tips:
+    post:
+      summary: Создать платёж с чаевыми
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema: {type: string, maxLength: 128}
+          description: Если передан, используется вместо idempotency_key из тела запроса.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/TipCreate'}
+      responses:
+        '200':
+          description: Повтор запроса; возвращён ранее созданный платёж
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '201':
+          description: Платёж создан, требуется подтверждение
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '404': {description: QR не найден}
+        '409':
+          description: QR уже использован или idempotency key конфликтует
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+        '410': {description: QR истёк}
+        '422':
+          description: Некорректная сумма, метод оплаты, оценка или отзыв
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+
+  /api/v1/goals:
+    post:
+      summary: Создать цель сбора сотрудника
+      security: [{cookieAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, target_amount]
+              properties:
+                employee_id: {type: string, description: Передаёт владелец мерчанта для целей своих сотрудников}
+                title: {type: string, maxLength: 100}
+                description: {type: string, maxLength: 300}
+                target_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+      responses:
+        '201':
+          description: Цель создана
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TipGoal'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Недостаточно прав}
+        '422': {description: Некорректная цель}
+
+  /api/v1/employees/{employee_id}/goals:
+    get:
+      summary: Список целей сотрудника
+      security: [{cookieAuth: []}]
+      parameters: [{name: employee_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: Сумма собрана из успешных платежей с привязкой к цели
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [goals]
+                properties:
+                  goals:
+                    type: array
+                    items: {$ref: '#/components/schemas/TipGoal'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Недостаточно прав}
+
+  /api/v1/goals/{goal_id}/close:
+    post:
+      summary: Закрыть цель сбора
+      security: [{cookieAuth: []}]
+      parameters: [{name: goal_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200':
+          description: Цель закрыта
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TipGoal'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Недостаточно прав}
+        '404': {description: Цель не найдена}
+
+  /api/v1/payments/{id}/confirm:
+    post:
+      summary: Подтвердить платёж и запустить эмулятор шлюза
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_token]
+              properties:
+                confirm_token: {type: string}
+      responses:
+        '200':
+          description: Успех или платёж всё ещё ожидает ответа эмулятора
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '402':
+          description: Эмулятор отклонил оплату
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '403': {description: Неверный токен подтверждения}
+        '404': {description: Платёж не найден}
+        '409': {description: Платёж уже завершён}
+
+  /api/v1/payments/{id}/cancel:
+    post:
+      summary: Отменить платёж до подтверждения
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_token]
+              properties:
+                confirm_token: {type: string}
+      responses:
+        '200':
+          description: Платёж отменён
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '403': {description: Неверный токен подтверждения}
+        '404': {description: Платёж не найден}
+        '409': {description: Платёж уже подтверждён или завершён}
+
+  /api/v1/reports/tips:
+    get:
+      summary: Отчёт по чаевым мерчанта
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: merchant_id, in: query, required: false, schema: {type: string}, description: Для владельца/администратора}
+        - {name: employee_id, in: query, required: false, schema: {type: string}, description: Только собственный отчёт сотрудника}
+        - {name: from, in: query, required: true, schema: {type: string, format: date}}
+        - {name: to, in: query, required: true, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: Агрегированный отчёт по успешным чаевым и всем попыткам оплаты
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - {$ref: '#/components/schemas/Report'}
+                  - {$ref: '#/components/schemas/EmployeeReport'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Отчёт доступен только владельцу мерчанта}
+        '422': {description: Некорректный диапазон дат}
+
+  /api/v1/reports/tips/daily:
+    get:
+      summary: Отчёт по чаевым в разрезе дней
+      security: [{cookieAuth: []}]
+      parameters:
+        - {name: merchant_id, in: query, required: true, schema: {type: string}}
+        - {name: from, in: query, required: true, schema: {type: string, format: date}}
+        - {name: to, in: query, required: true, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: Метрики успешных платежей по дням
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [merchant_id, daily]
+                properties:
+                  merchant_id: {type: string}
+                  daily:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, tips_total, payments_count, avg_tip_amount]
+                      properties:
+                        date: {type: string, format: date}
+                        tips_total: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+                        payments_count: {type: integer}
+                        avg_tip_amount: {type: string, pattern: '^[0-9]+\.[0-9]{2}$'}
+        '401': {description: Требуется авторизация}
+        '403': {description: Недостаточно прав}
+        '422': {description: Некорректный диапазон дат}

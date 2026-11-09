@@ -1,73 +1,123 @@
-# React + TypeScript + Vite
+# «мерси» — чаевые, которые согревают
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Веб-приложение проекта команды **TatarstanInnovation LLC** для кейс-чемпионата
+**«ВПОТОКЕ»**. Сервис помогает гостю быстро поблагодарить сотрудника заведения
+чаевыми по QR-коду, а сотруднику — получать чаевые и комплименты.
 
-Currently, two official plugins are available:
+## О проекте
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Гость сканирует персональный QR-код сотрудника, открывает страницу чаевых,
+выбирает сумму и способ оплаты. Вместе с чаевыми он может оставить оценку,
+отзыв заведению или личный комплимент сотруднику. В интерфейсе также
+предусмотрено отображение цели сотрудника и прогресса её достижения.
 
-## React Compiler
+Проект состоит из клиентского приложения на React и отдельной серверной части
+на Django. В репозитории фронтенд находится в ветке `main`, backend — в ветке
+`backend`. Спецификация API, ролей, данных, платежей и тестов собрана в каталоге
+[`filesmd`](./filesmd/).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Демо и дизайн
 
-## Expanding the ESLint configuration
+- Демо QR-сценария: [tatarllc.space/tip/qr_102](https://tatarllc.space/tip/qr_102)
+- Макет интерфейса: [Figma](https://www.figma.com/design/jO4dTvhY77avgcFuJwIw6l/Untitled?node-id=1-3)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Основные сценарии
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. **Гость:** открывает публичную ссылку QR, знакомится с сотрудником,
+   выбирает чаевые, указывает способ оплаты и при желании добавляет отзыв,
+   оценку или комплимент.
+2. **Сотрудник:** входит в систему, создаёт персональный QR-код, делится им
+   с гостями и отслеживает чаевые и цель.
+3. **Владелец заведения (мерчант):** подаёт заявку, управляет сотрудниками
+   своего заведения и просматривает отчётность.
+4. **Администратор:** рассматривает заявки мерчантов, управляет их статусами
+   и справочниками.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Поток чаевых
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+`QR-код → страница гостя → сумма и комплимент → способ оплаты → результат`
+
+Для QR предусмотрены подпись HMAC-SHA256, срок действия 24 часа и одноразовый
+nonce. В серверной спецификации также описаны идемпотентность платежей,
+журналирование переходов статусов и ограничения доступа по ролям. Статусы
+платежа включают `CREATED`, `PENDING`, `SUCCESS`, `DECLINED` и `CANCELED`.
+В спецификации указана комиссия 2% для СБП и 5% для карты/SberPay; способ
+учёта комиссии зависит от выбранного плательщика.
+
+## Технологии
+
+- **Frontend:** React 19, TypeScript, Vite, React Router, Zustand.
+- **Backend:** Django REST API в отдельной ветке проекта.
+- **Интеграция:** клиент использует API, сессионные cookie и CSRF-защиту;
+  базовый адрес API задаётся через `VITE_API_BASE_URL`.
+
+## Локальный запуск фронтенда
+
+Нужны Node.js и npm.
+
+```bash
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Vite запустит приложение на `http://localhost:8000`. Для работы API задайте
+адрес backend в `.env.local`:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```dotenv
+VITE_API_BASE_URL=http://localhost:8001
 ```
+
+Если переменная не задана, клиент обращается к API на том же origin. Backend
+должен быть запущен отдельно и предоставлять API, ожидаемый фронтендом.
+
+### Проверки и сборка
+
+```bash
+npm run lint
+npm run build
+```
+
+Дополнительные команды: `npm run preview` — просмотр production-сборки,
+`npm run format` — проверка форматирования.
+
+## Структура фронтенда
+
+- `src/pages/guest/` — гостевая страница QR и экран результата.
+- `src/pages/auth/` — главная страница и вход сотрудника.
+- `src/pages/waiter/` и `src/pages/admin/` — интерфейсы сотрудников
+  и администратора.
+- `src/api/` — API-клиент и его конфигурация.
+- `src/stores/` — состояние авторизации и результата оплаты.
+- `src/components/` — общие элементы интерфейса, цель сбора и платёжное окно.
+
+Ключевые маршруты: `/` — главная, `/auth` — вход, `/tip/:hash` — страница
+чаевых, `/tip/:hash/success` — экран результата, `/waiter` и `/admin` —
+защищённые разделы.
+
+## Границы прототипа
+
+Приложение демонстрирует пользовательский сценарий и загрузку данных QR через
+API. В текущем фронтенде подтверждение в платёжном окне показывает локальный
+экран успеха и не отправляет платёж на сервер. Настоящий банк или платёжный
+шлюз не подключён; в проектных материалах для backend описан локальный
+эмулятор результатов `SUCCESS`, `DECLINED` и `PENDING`. Фактическое списание
+денег не выполняется. Интерфейсы сотрудника и администратора находятся в
+разработке; реализация некоторых сценариев фронтенда пока отличается от полной
+backend-спецификации.
+
+Перед production-развёртыванием необходимы реальный платёжный провайдер,
+настройка HTTPS и безопасных cookie, ограничение частоты запросов и
+инфраструктурная конфигурация. Не передавайте реальные данные карт или
+секреты через клиентское приложение.
+
+## Материалы проекта
+
+- [`filesmd/05_презентация.md`](./filesmd/05_презентация.md) — описание кейса.
+- [`filesmd/06_приложение.md`](./filesmd/06_приложение.md) — приложение
+  к презентации и артефакты команды.
+- [`filesmd/04_requirements.md`](./filesmd/04_requirements.md) — требования
+  и ограничения.
+- [`filesmd/02_roles.md`](./filesmd/02_roles.md) — роли и права доступа.
+- [`filesmd/06_qr_and_tip_dialog.md`](./filesmd/06_qr_and_tip_dialog.md) —
+  QR-сценарий и логика диалога чаевых.
+- [`filesmd/11_ИБ.md`](./filesmd/11_ИБ.md) — модель угроз и меры безопасности.
