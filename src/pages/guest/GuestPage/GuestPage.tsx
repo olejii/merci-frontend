@@ -145,6 +145,8 @@ function GuestPage() {
                   {Array.from({ length: 5 }, (_, index) => (
                     <span
                       key={index}
+                      role="button"
+                      aria-label={`Оценка ${index + 1}`}
                       onClick={() => setRating(index + 1)}
                       className={index < rating ? 'active' : ''}
                     >
