@@ -1,5 +1,8 @@
+import base64
 import hashlib
+import io
 import tempfile
+import xml.etree.ElementTree as ET
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -12,6 +15,7 @@ from django.core.management.base import CommandError
 from django.test import Client
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from PIL import Image
 from io import StringIO
 
 from .models import Employee, Merchant, Payment, QRLink, TipGoal, UserProfile
@@ -185,9 +189,42 @@ class TipsApiTests(TestCase):
         qr = QRLink.objects.get(pk=body["qr_id"])
         self.assertTrue(body["payment_url"].endswith("?qr={}".format(qr.qr_id)))
         self.assertTrue(body["qr_image_svg_base64"])
+        self.assertEqual(body["qr_image_url"], "http://testserver/api/v1/qr/{}/image".format(qr.qr_id))
+        svg = ET.fromstring(base64.b64decode(body["qr_image_svg_base64"]))
+        self.assertEqual(svg.get("width"), "196px")
+        self.assertEqual(svg.get("height"), "196px")
+        self.assertEqual(svg.get("fill"), "#2E1E14")
+        svg_namespace = "http://www.w3.org/2000/svg"
+        self.assertEqual(svg[0].tag, "{{{}}}rect".format(svg_namespace))
+        self.assertEqual(svg[0].get("fill"), "#FFFFFF")
+        qr_path = svg.find("{{{}}}path".format(svg_namespace))
+        self.assertIsNotNone(qr_path)
+        self.assertEqual(qr_path.get("fill"), "#2E1E14")
+        icon = svg.find("{{{}}}svg".format(svg_namespace))
+        self.assertIsNotNone(icon)
+        self.assertEqual(icon.get("viewBox"), "0 0 44 44")
+        self.assertEqual(icon.get("fill"), "none")
+        self.assertEqual([element.tag for element in icon], [
+            "{{{}}}rect".format(svg_namespace),
+            "{{{}}}rect".format(svg_namespace),
+            "{{{}}}path".format(svg_namespace),
+        ])
+        self.assertEqual([element.get("fill") for element in icon], ["#7A4A22", None, "#FFF6EC"])
+        self.assertEqual([element.get("stroke") for element in icon], [None, "#FBF6F0", "#FFF6EC"])
+        self.assertEqual(icon.get("width"), icon.get("height"))
+        view_x, view_y, view_width, view_height = map(float, svg.get("viewBox").split())
+        self.assertAlmostEqual(float(icon.get("x")) + float(icon.get("width")) / 2, view_x + view_width / 2)
+        self.assertAlmostEqual(float(icon.get("y")) + float(icon.get("height")) / 2, view_y + view_height / 2)
         self.assertEqual(body["merchant_name"], self.merchant.name)
         self.assertEqual(body["employee_name"], "Анна")
         self.assertNotIn("base_amount", body)
+
+        image_response = self.client.get("/api/v1/qr/{}/image".format(qr.qr_id))
+        self.assertEqual(image_response.status_code, 200)
+        self.assertEqual(image_response["Content-Type"], "image/png")
+        image = Image.open(io.BytesIO(image_response.content))
+        self.assertEqual(image.format, "PNG")
+        self.assertEqual(image.size, (196, 196))
 
     @override_settings(CSRF_TRUSTED_ORIGINS=["http://localhost:8000"])
     def test_payment_link_returns_qr_data_json_and_csrf_protects_payment(self):

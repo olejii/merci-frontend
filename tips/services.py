@@ -1,8 +1,10 @@
 import base64
 import hashlib
 import hmac
+import io
 import json
 import secrets
+import xml.etree.ElementTree as ET
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from uuid import uuid4
@@ -13,11 +15,16 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.utils import timezone
+from PIL import Image, ImageDraw
 from qrcode.image.svg import SvgPathImage
 
 from .models import AuditEvent, Employee, Merchant, Payment, QRLink, TipGoal
 
 CENT = Decimal("0.01")
+QR_IMAGE_SIZE = 196
+QR_COLOR = "#2E1E14"
+SVG_NAMESPACE = "http://www.w3.org/2000/svg"
+ET.register_namespace("", SVG_NAMESPACE)
 
 
 class DomainError(Exception):
@@ -95,8 +102,96 @@ def validate_qr(qr):
 
 
 def make_qr_image(payment_url):
-    image = qrcode.make(payment_url, image_factory=SvgPathImage, box_size=8, border=4)
-    return base64.b64encode(image.to_string(encoding="unicode").encode("utf-8")).decode("ascii")
+    qr = _qr_code(payment_url)
+    image = qr.make_image(
+        image_factory=SvgPathImage,
+        fill_color=QR_COLOR,
+        back_color="#FFFFFF",
+    )
+    svg = ET.fromstring(image.to_string(encoding="unicode"))
+    svg.set("width", "{}px".format(QR_IMAGE_SIZE))
+    svg.set("height", "{}px".format(QR_IMAGE_SIZE))
+    svg.set("fill", QR_COLOR)
+    svg.attrib.pop("fill_color", None)
+    svg.attrib.pop("back_color", None)
+    for path in svg.findall("{{{}}}path".format(SVG_NAMESPACE)):
+        path.set("fill", QR_COLOR)
+
+    view_x, view_y, view_width, view_height = map(float, svg.get("viewBox").split())
+    icon_size = min(view_width, view_height) * 0.18
+    panel_size = icon_size * 1.15
+    center_x = view_x + view_width / 2
+    center_y = view_y + view_height / 2
+    background = ET.Element(
+        "{{{}}}rect".format(SVG_NAMESPACE),
+        {
+            "x": str(view_x),
+            "y": str(view_y),
+            "width": str(view_width),
+            "height": str(view_height),
+            "fill": "#FFFFFF",
+        },
+    )
+    panel = ET.Element(
+        "{{{}}}rect".format(SVG_NAMESPACE),
+        {
+            "x": str(center_x - panel_size / 2),
+            "y": str(center_y - panel_size / 2),
+            "width": str(panel_size),
+            "height": str(panel_size),
+            "rx": str(panel_size * 0.12),
+            "fill": "#FFFFFF",
+        },
+    )
+    svg.insert(0, panel)
+    svg.insert(0, background)
+
+    icon_source = ET.parse(settings.BASE_DIR / "Background+Border.svg").getroot()
+    icon = ET.Element(
+        "{{{}}}svg".format(SVG_NAMESPACE),
+        dict(icon_source.attrib),
+    )
+    icon.set("x", str(center_x - icon_size / 2))
+    icon.set("y", str(center_y - icon_size / 2))
+    icon.set("width", str(icon_size))
+    icon.set("height", str(icon_size))
+    icon.set("preserveAspectRatio", "xMidYMid meet")
+    icon.extend(list(icon_source))
+    svg.append(icon)
+    rendered = ET.tostring(svg, encoding="unicode")
+    return base64.b64encode(rendered.encode("utf-8")).decode("ascii")
+
+
+def _qr_code(payment_url):
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=1,
+        border=4,
+    )
+    qr.add_data(payment_url)
+    qr.make(fit=True)
+    return qr
+
+
+def make_qr_png(payment_url):
+    image = _qr_code(payment_url).make_image(fill_color=QR_COLOR, back_color="#FFFFFF").convert("RGBA")
+    image = image.resize((QR_IMAGE_SIZE, QR_IMAGE_SIZE), Image.Resampling.NEAREST)
+    center = QR_IMAGE_SIZE // 2
+    icon_size = round(QR_IMAGE_SIZE * 0.18)
+    panel_size = round(icon_size * 1.15)
+    panel_start = center - panel_size // 2
+    icon_start = center - icon_size // 2
+    ImageDraw.Draw(image).rounded_rectangle(
+        (panel_start, panel_start, panel_start + panel_size, panel_start + panel_size),
+        radius=round(panel_size * 0.12),
+        fill="#FFFFFF",
+    )
+    icon = Image.open(settings.BASE_DIR / "Background+Border.png").convert("RGBA")
+    icon = icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+    image.alpha_composite(icon, (icon_start, icon_start))
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    return output.getvalue()
 
 
 @transaction.atomic
@@ -108,6 +203,7 @@ def create_qr(employee):
         raise DomainError("EMPLOYEE_INACTIVE", "Сотрудник ещё не принял приглашение", 409)
     expires_at = timezone.now() + timedelta(hours=settings.QR_TTL_HOURS)
     nonce = secrets.token_hex(3)
+
     qr = QRLink(
         qr_id=_id("qr", QRLink, "qr_id", 3),
         merchant=merchant,
@@ -125,7 +221,7 @@ def create_qr(employee):
 
 
 def serialize_qr(qr):
-    payment_url = "{}/pay/?qr={}".format(settings.PUBLIC_BASE_URL, qr.qr_id)
+    payment_url = "{}/tip/{}".format("merci-chi.vercel.app", qr.qr_id)
     return {
         "qr_id": qr.qr_id,
         "merchant_id": qr.merchant_id,
@@ -153,6 +249,7 @@ def serialize_qr(qr):
             for goal in qr.employee.tip_goals.filter(is_active=True).order_by("-created_at")
         ],
         "payment_url": payment_url,
+        "qr_image_url": "{}/api/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
         "qr_image_svg_base64": make_qr_image(payment_url),
         "exp": qr.expires_at.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     }

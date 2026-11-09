@@ -8,12 +8,13 @@ from functools import wraps
 from uuid import uuid4
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Avg, Sum
 from django.db.models.functions import TruncDate
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -29,6 +30,7 @@ from .services import (
     create_payment,
     create_qr,
     hash_invite_token,
+    make_qr_png,
     new_invite_token,
     parse_json_request,
     payment_data,
@@ -320,7 +322,6 @@ def create_tip_goal(request):
     target = _money(data.get("target_amount"), "GOAL_AMOUNT_INVALID")
     if not title or len(title) > 100 or len(description) > 300 or target <= 0 or target > Decimal("99999999.99"):
         raise DomainError("GOAL_INVALID", "Проверьте название, описание и целевую сумму сбора", 422)
-    print(1)
     goal = TipGoal.objects.create(
         goal_id="g_{}".format(uuid4().hex),
         employee=employee,
@@ -376,6 +377,19 @@ def close_tip_goal(request, goal_id):
 @json_endpoint
 def get_qr(request, qr_id):
     return _qr_info(qr_id)
+
+
+@require_http_methods(["GET"])
+@json_endpoint
+def get_qr_image(request, qr_id):
+    qr = QRLink.objects.select_related("merchant", "employee").filter(pk=qr_id).first()
+    if qr is None:
+        raise DomainError("INVALID_QR", "QR не найден", 404)
+    validate_qr(qr)
+    payment_url = "{}/pay/?qr={}".format(settings.PUBLIC_BASE_URL, qr.qr_id)
+    response = HttpResponse(make_qr_png(payment_url), content_type="image/png")
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def _qr_info(qr_id):
