@@ -226,7 +226,7 @@ def create_qr(employee):
 
 
 def serialize_qr(qr):
-    payment_url = "{}/tip/{}".format("merci-chi.vercel.app", qr.qr_id)
+    payment_url = "{}/tip/{}".format("tatarllc.space", qr.qr_id)
     return {
         "qr_id": qr.qr_id,
         "merchant_id": qr.merchant_id,

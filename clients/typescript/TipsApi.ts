@@ -236,7 +236,7 @@ export enum ContentType {
 
 export class HttpClient<SecurityDataType = unknown> {
   public baseUrl: string =
-    "https://tatarstaninnovation-llc-backend.vercel.app";
+    "https://tatarllc.ru";
   private securityData: SecurityDataType | null = null;
   private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
   private abortControllers = new Map<CancelToken, AbortController>();
@@ -441,7 +441,7 @@ export class HttpClient<SecurityDataType = unknown> {
 /**
  * @title Tips Platform
  * @version 1.0.0
- * @baseUrl https://tatarstaninnovation-llc-backend.vercel.app
+ * @baseUrl https://tatarllc.ru
  *
  * Онлайн-чаевые для сети «Вкус-Сервис»
  */

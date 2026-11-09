@@ -47,7 +47,7 @@ CSRF_TRUSTED_ORIGINS = [
     for origin in (
         "http://localhost:8000,http://127.0.0.1:8000,"
         "http://155.212.245.37:8080,"
-        "https://tatarstaninnovation-llc-backend.vercel.app,"
+        "https://tatarllc.ru,"
         + os.environ.get("CSRF_TRUSTED_ORIGINS", "")
     ).split(",")
     if origin.strip()
@@ -111,6 +111,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "/admin/login/"
 
 TIP_QR_SECRET = os.environ.get("TIP_QR_SECRET", "")
-PUBLIC_BASE_URL = os.environ.get("_", "http://localhost:8000").rstrip("/")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 QR_TTL_HOURS = 24
 TIP_OPTIONS = [50, 100, 200, 500]
