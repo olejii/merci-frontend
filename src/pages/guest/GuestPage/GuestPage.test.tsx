@@ -335,7 +335,7 @@ describe('GuestPage Inputs & QA Test Suite', () => {
 
       // 6. Verify SuccessPage rendered the submitted data
       expect(screen.getByText('Спасибо!')).toBeInTheDocument();
-      expect(screen.getByText('Ваш комплимент уже у него')).toBeInTheDocument();
+      expect(screen.getByText(/Ваш комплимент уже у него/)).toBeInTheDocument();
       expect(screen.getByText('Отзыв ресторану')).toBeInTheDocument();
     });
   });

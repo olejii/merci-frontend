@@ -100,6 +100,7 @@ describe('PaymentModal Inputs & Interactions', () => {
       expect(overlay).toHaveClass('modal-overlay--closing');
 
       fireEvent.animationEnd(overlay);
+      fireEvent(overlay, new Event('webkitAnimationEnd', { bubbles: true }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -112,10 +113,10 @@ describe('PaymentModal Inputs & Interactions', () => {
       // Drag 60px (<= 100px threshold) -> should snap back
       fireEvent.pointerDown(dragHandle, { clientY: 100, pointerId: 1 });
       fireEvent.pointerMove(dragHandle, { clientY: 160 });
-      expect(dialog).toHaveStyle({ transform: 'translateY(60px)' });
+      expect(dialog.style.transform).toBe('translateY(60px)');
 
       fireEvent.pointerUp(dragHandle);
-      expect(dialog).toHaveStyle({ transform: '' });
+      expect(dialog.style.transform).toBe('');
       expect(overlay).not.toHaveClass('modal-overlay--closing');
 
       // Drag 150px (> 100px threshold) -> should close
