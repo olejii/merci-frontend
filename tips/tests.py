@@ -5,18 +5,19 @@ import tempfile
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 from decimal import Decimal
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import Client
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
-from io import StringIO
 
 from .models import Employee, Merchant, Payment, QRLink, TipGoal, UserProfile
 from .services import sign_qr, verify_qr_signature
@@ -225,6 +226,53 @@ class TipsApiTests(TestCase):
         image = Image.open(io.BytesIO(image_response.content))
         self.assertEqual(image.format, "PNG")
         self.assertEqual(image.size, (196, 196))
+
+    def test_employee_photo_returns_png_placeholder_and_accepts_png_upload(self):
+        qr = self.make_qr()
+        photo_url = "/api/v1/qr/{}/employee-photo".format(qr.qr_id)
+
+        placeholder = self.client.get(photo_url)
+        self.assertEqual(placeholder.status_code, 200)
+        self.assertEqual(placeholder["Content-Type"], "image/png")
+        self.assertEqual(Image.open(io.BytesIO(placeholder.content)).format, "PNG")
+
+        image_buffer = io.BytesIO()
+        Image.new("RGB", (32, 32), "#336699").save(image_buffer, format="PNG")
+        upload = SimpleUploadedFile("employee.png", image_buffer.getvalue(), content_type="image/png")
+        uploaded = self.client.post(photo_url, {"photo": upload})
+        self.assertEqual(uploaded.status_code, 200)
+        self.assertEqual(uploaded.json()["employee_photo_url"], "http://testserver" + photo_url)
+
+        qr.employee.refresh_from_db()
+        self.assertTrue(qr.employee.photo_png)
+        stored_image = self.client.get(photo_url)
+        self.assertEqual(stored_image.status_code, 200)
+        self.assertEqual(stored_image.content, bytes(qr.employee.photo_png))
+        self.assertEqual(Image.open(io.BytesIO(stored_image.content)).format, "PNG")
+
+    def test_qr_returns_compliments_and_payment_persists_multiple_choices(self):
+        qr = self.make_qr()
+        qr_response = self.client.get("/api/v1/qr/{}".format(qr.qr_id))
+        self.assertEqual(qr_response.status_code, 200)
+        self.assertEqual(
+            {option["value"] for option in qr_response.json()["compliment_options"]},
+            set(Payment.Compliment.values),
+        )
+        self.assertEqual(
+            qr_response.json()["employee_photo_url"],
+            "http://testserver/api/v1/qr/{}/employee-photo".format(qr.qr_id),
+        )
+
+        response = self.create_payment(
+            qr,
+            "multiple-compliment-idempotency",
+            compliments=["ATTENTIVE", "FAST"],
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(set(response.json()["compliments"]), {"ATTENTIVE", "FAST"})
+        payment = Payment.objects.get(pk=response.json()["payment_id"])
+        self.assertEqual(set(payment.compliments.values_list("code", flat=True)), {"ATTENTIVE", "FAST"})
+        self.assertEqual(payment.compliment, "")
 
     @override_settings(CSRF_TRUSTED_ORIGINS=["http://localhost:8000"])
     def test_payment_link_returns_qr_data_json_and_csrf_protects_payment(self):

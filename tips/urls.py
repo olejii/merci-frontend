@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/v1/employees", views.invite_employee, name="invite-employee"),
     path("api/v1/employees/<str:employee_id>/accept", views.accept_employee_invite, name="accept-employee"),
     path("api/v1/qr", views.generate_qr, name="generate-qr"),
+    path("api/v1/qr/<str:qr_id>/employee-photo", views.employee_photo, name="employee-photo"),
     path("api/v1/qr/<str:qr_id>/image", views.get_qr_image, name="get-qr-image"),
     path("api/v1/qr/<str:qr_id>", views.get_qr, name="get-qr"),
     path("api/v1/goals", views.create_tip_goal, name="create-tip-goal"),

@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import io
 import re
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
@@ -19,6 +20,7 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from PIL import Image, UnidentifiedImageError
 
 from .models import AuditEvent, Employee, Merchant, Payment, QRLink, TipGoal, TipReport, UserProfile
 from .services import (
@@ -30,6 +32,7 @@ from .services import (
     create_payment,
     create_qr,
     hash_invite_token,
+    make_employee_placeholder_png,
     make_qr_png,
     new_invite_token,
     parse_json_request,
@@ -39,6 +42,8 @@ from .services import (
 )
 
 User = get_user_model()
+MAX_EMPLOYEE_PHOTO_SIZE = 5 * 1024 * 1024
+MAX_EMPLOYEE_PHOTO_PIXELS = 20_000_000
 
 
 def json_endpoint(view):
@@ -392,6 +397,74 @@ def get_qr_image(request, qr_id):
     return response
 
 
+@require_http_methods(["GET", "POST"])
+@json_endpoint
+def employee_photo(request, qr_id):
+    qr = QRLink.objects.select_related("employee__merchant").filter(pk=qr_id).first()
+    if qr is None:
+        raise DomainError("INVALID_QR", "QR не найден", 404)
+
+    if request.method == "GET":
+        image_data = qr.employee.photo_png or make_employee_placeholder_png()
+        response = HttpResponse(bytes(image_data), content_type="image/png")
+        response["Cache-Control"] = "no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    if not request.user.is_authenticated:
+        raise DomainError("AUTH_REQUIRED", "Требуется авторизация", 401)
+    employee, merchant = staff_member(request)
+    can_manage_photo = (
+        request.user.is_staff
+        or (employee is not None and employee.employee_id == qr.employee_id)
+        or (merchant is not None and merchant.merchant_id == qr.employee.merchant_id)
+    )
+    if not can_manage_photo:
+        raise DomainError("FORBIDDEN", "Недостаточно прав для изменения фото сотрудника", 403)
+
+    uploaded = request.FILES.get("photo")
+    if uploaded is None:
+        raise DomainError("PHOTO_REQUIRED", "Передайте PNG-файл в поле photo", 422)
+    if uploaded.size > MAX_EMPLOYEE_PHOTO_SIZE:
+        raise DomainError("PHOTO_TOO_LARGE", "Размер изображения не должен превышать 5 МБ", 422)
+
+    raw_image = uploaded.read(MAX_EMPLOYEE_PHOTO_SIZE + 1)
+    if len(raw_image) > MAX_EMPLOYEE_PHOTO_SIZE:
+        raise DomainError("PHOTO_TOO_LARGE", "Размер изображения не должен превышать 5 МБ", 422)
+
+    try:
+        with Image.open(io.BytesIO(raw_image)) as image:
+            if image.format != "PNG":
+                raise DomainError("INVALID_PHOTO_FORMAT", "Загрузите изображение в формате PNG", 422)
+            if image.width * image.height > MAX_EMPLOYEE_PHOTO_PIXELS:
+                raise DomainError("PHOTO_DIMENSIONS_TOO_LARGE", "Изображение превышает допустимый размер", 422)
+            image.verify()
+        with Image.open(io.BytesIO(raw_image)) as image:
+            normalized = io.BytesIO()
+            image.convert("RGBA" if "A" in image.getbands() else "RGB").save(
+                normalized,
+                format="PNG",
+                optimize=True,
+            )
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        raise DomainError("INVALID_PHOTO", "Файл не является корректным PNG-изображением", 422)
+
+    photo_png = normalized.getvalue()
+    if len(photo_png) > MAX_EMPLOYEE_PHOTO_SIZE:
+        raise DomainError("PHOTO_TOO_LARGE", "Размер изображения не должен превышать 5 МБ", 422)
+    qr.employee.photo_png = photo_png
+    qr.employee.save(update_fields=["photo_png"])
+    return JsonResponse(
+        {
+            "employee_id": qr.employee_id,
+            "employee_photo_url": "{}/api/v1/qr/{}/employee-photo".format(
+                settings.PUBLIC_BASE_URL,
+                qr.qr_id,
+            ),
+        }
+    )
+
+
 def _qr_info(qr_id):
     qr = QRLink.objects.select_related("merchant", "employee").filter(pk=qr_id).first()
     if qr is None:
@@ -420,6 +493,7 @@ def create_tip(request):
         restaurant_comment=data.get("restaurant_comment", ""),
         compliment=data.get("compliment", ""),
         employee_comment=data.get("employee_comment", ""),
+        compliments=data.get("compliments"),
     )
     return JsonResponse(payment_data(payment, token), status=201 if created else 200)
 

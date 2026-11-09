@@ -84,6 +84,7 @@ class Employee(models.Model):
     )
     invite_token_hash = models.CharField(max_length=64, blank=True)
     invite_expires_at = models.DateTimeField(null=True, blank=True)
+    photo_png = models.BinaryField(null=True, blank=True)
     source_metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -137,6 +138,14 @@ class TipGoal(models.Model):
         return min(100, int(self.collected_amount * 100 / self.target_amount))
 
 
+class ComplimentOption(models.Model):
+    code = models.CharField(max_length=16, primary_key=True)
+    label = models.CharField(max_length=64)
+
+    def __str__(self):
+        return self.label
+
+
 class Payment(models.Model):
     class Status(models.TextChoices):
         CREATED = "CREATED", "Создан"
@@ -174,6 +183,7 @@ class Payment(models.Model):
     restaurant_rating = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)])
     restaurant_comment = models.CharField(max_length=500, blank=True)
     compliment = models.CharField(max_length=16, choices=Compliment.choices, blank=True)
+    compliments = models.ManyToManyField(ComplimentOption, blank=True, related_name="payments")
     employee_comment = models.CharField(max_length=500, blank=True)
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.CREATED)
     idempotency_key = models.CharField(max_length=128)

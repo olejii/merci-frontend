@@ -18,7 +18,7 @@ from django.utils import timezone
 from PIL import Image, ImageDraw
 from qrcode.image.svg import SvgPathImage
 
-from .models import AuditEvent, Employee, Merchant, Payment, QRLink, TipGoal
+from .models import AuditEvent, ComplimentOption, Employee, Merchant, Payment, QRLink, TipGoal
 
 CENT = Decimal("0.01")
 QR_IMAGE_SIZE = 196
@@ -249,10 +249,28 @@ def serialize_qr(qr):
             for goal in qr.employee.tip_goals.filter(is_active=True).order_by("-created_at")
         ],
         "payment_url": payment_url,
+        "employee_photo_url": "{}/api/v1/qr/{}/employee-photo".format(
+            settings.PUBLIC_BASE_URL,
+            qr.qr_id,
+        ),
+        "compliment_options": [
+            {"value": value, "label": label}
+            for value, label in Payment.Compliment.choices
+        ],
         # "qr_image_url": "{}/api/v1/qr/{}/image".format(settings.PUBLIC_BASE_URL, qr.qr_id),
         # "qr_image_svg_base64": make_qr_image(payment_url),
         "exp": qr.expires_at.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     }
+
+
+def make_employee_placeholder_png():
+    image = Image.new("RGB", (256, 256), "#F5EEE7")
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((84, 40, 172, 128), fill="#B9A18D")
+    draw.ellipse((54, 132, 202, 278), fill="#B9A18D")
+    output = io.BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
 
 
 def _money(value, code):
@@ -280,6 +298,7 @@ def create_payment(
     restaurant_rating=None,
     restaurant_comment="",
     compliment="",
+    compliments=None,
     employee_comment="",
 ):
     if not idempotency_key or len(idempotency_key) < 16 or len(idempotency_key) > 128:
@@ -316,8 +335,20 @@ def create_payment(
     employee_comment = employee_comment.strip()
     if len(restaurant_comment) > 500 or len(employee_comment) > 500:
         raise DomainError("COMMENT_TOO_LONG", "Комментарий не должен превышать 500 символов", 422)
-    if compliment and compliment not in Payment.Compliment.values:
-        raise DomainError("COMPLIMENT_INVALID", "Выберите комплимент из предложенных вариантов", 422)
+    if compliments is None:
+        compliments = []
+    elif not isinstance(compliments, list):
+        raise DomainError("COMPLIMENT_INVALID", "Комплименты должны быть переданы списком", 422)
+    if compliment:
+        if compliments:
+            raise DomainError("COMPLIMENT_INVALID", "Передайте compliment или compliments, но не оба поля", 422)
+        compliments = [compliment]
+    if (
+        len(compliments) > len(Payment.Compliment.choices)
+        or len(compliments) != len(set(compliments))
+        or any(value not in Payment.Compliment.values for value in compliments)
+    ):
+        raise DomainError("COMPLIMENT_INVALID", "Выберите комплименты из предложенных вариантов", 422)
 
     existing = Payment.objects.filter(merchant=qr.merchant, idempotency_key=idempotency_key).first()
     if existing:
@@ -330,7 +361,7 @@ def create_payment(
             or existing.service_rating != service_rating
             or existing.restaurant_rating != restaurant_rating
             or existing.restaurant_comment != restaurant_comment
-            or existing.compliment != compliment
+            or set(existing.compliments.values_list("code", flat=True)) != set(compliments)
             or existing.employee_comment != employee_comment
         ):
             raise DomainError("IDEMPOTENCY_CONFLICT", "Ключ уже использован для другого запроса", 409)
@@ -352,12 +383,14 @@ def create_payment(
         service_rating=service_rating,
         restaurant_rating=restaurant_rating,
         restaurant_comment=restaurant_comment,
-        compliment=compliment,
+        compliment=compliments[0] if len(compliments) == 1 else "",
         employee_comment=employee_comment,
         idempotency_key=idempotency_key,
         status=Payment.Status.CREATED,
     )
     payment.save()
+    if compliments:
+        payment.compliments.set(ComplimentOption.objects.filter(code__in=compliments))
     qr.used_at = timezone.now()
     qr.save(update_fields=["used_at"])
     _audit(payment, "payment_created", "", Payment.Status.CREATED, AuditEvent.Actor.CLIENT)
@@ -373,6 +406,7 @@ def payment_data(payment, confirm_token=None):
         "service_fee_amount": str(payment.service_fee.quantize(CENT)),
         "payment_method": payment.payment_method,
         "goal_id": payment.goal_id,
+        "compliments": list(payment.compliments.values_list("code", flat=True)),
         "confirm_token": confirm_token,
         "error_code": payment.error_code or None,
     }
