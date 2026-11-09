@@ -13,6 +13,7 @@ const Button: React.FC<ButtonProps> = ({ children, type, className, onClick, dis
   const buttonType = type || 'primary';
   return (
     <button
+      disabled={disabled}
       onClick={!disabled ? onClick : undefined}
       className={`button ${buttonType} ${className} ${disabled ? 'disabled' : ''}`}
     >

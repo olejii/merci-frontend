@@ -1,0 +1,89 @@
+.background-img-main {
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  object-fit: contain;
+  z-index: -1;
+}
+
+.img-wrapper:before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  aspect-ratio: 393 / 504;
+  z-index: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(46, 30, 20, 0.55) 0%,
+    rgba(46, 30, 20, 0.1) 45%,
+    rgba(46, 30, 20, 0) 70%,
+    #fbf6f0 100%
+  );
+}
+
+.login-container {
+  padding-top: 53dvh;
+  position: relative;
+  z-index: 3;
+
+  & > button {
+    animation: pop-in 300ms ease both;
+    animation-delay: 400ms;
+  }
+}
+
+.login-app-name {
+  left: 24px;
+  transform: translate(0, -50%);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: #7a4a22;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.88px;
+
+  animation: pop-in 300ms ease both;
+  animation-delay: 100ms;
+}
+
+.login-header {
+  font-size: 34px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -1.02px;
+  color: #2e1e14;
+
+  animation: pop-in 300ms ease both;
+  animation-delay: 200ms;
+
+  & > span {
+    color: #d9a066;
+  }
+}
+
+.login-text {
+  font: var(--text-body);
+  color: #5f4d3f;
+  padding: 18px 0 36px;
+
+  animation: pop-in 300ms ease both;
+  animation-delay: 300ms;
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

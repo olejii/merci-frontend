@@ -10,8 +10,11 @@ import Background from 'src/assets/Background.png';
 import WaiterImg from 'src/assets/waiter.png';
 
 import './GuestPage.css';
+import { api } from 'src/api/client.ts';
+import type { QRResponse } from 'src/api/api.ts';
 
 const test_sum = Math.floor(Math.random() * 401) * 10 + 1000;
+const test_table = Math.floor(Math.random() * 10) + 1;
 
 function GuestPage() {
   const [tipsValue, setTipsValue] = useState<number>(0);
@@ -25,15 +28,32 @@ function GuestPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [paymentInfo, setPaymentInfo] = useState<QRResponse | null>(null);
+
   const suggested_tips = [300, 500, 700, 1000];
   const suggested_compliments = ['Внимательный', 'Быстро', 'Отличные советы', 'Улыбка', 'Как дома'];
   const payment_methods = ['СБП', 'SberPay', 'Карта'];
 
   const initTipInfo = () => {
-    setTimeout(() => setLoading(false), 500);
+    setLoading(true);
+    console.log('loading true');
+    const qrId = window.location.href.split('/')[4];
+    console.log(qrId);
+
+    try {
+      api.v1QrDetail(qrId).then((res) => {
+        setLoading(false);
+        console.log(res);
+        setPaymentInfo(res.data);
+      });
+    } catch (error) {
+      setLoading(false);
+      console.error(error);
+    }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     initTipInfo();
   }, []);
 
@@ -47,7 +67,7 @@ function GuestPage() {
 
           <div className={'guest-header'}>
             <div className={'guest-title'}>
-              <ShopIcon /> Вкус-Сервис · Покровка
+              <ShopIcon /> Вкус-Сервис · {paymentInfo?.merchant_name.split('Вкус-Сервис')[1]}
             </div>
 
             <div className={'guest-title'}>RU</div>
@@ -55,8 +75,10 @@ function GuestPage() {
 
           <div className={'waiter-info'}>
             <img src={WaiterImg} alt={''} />
-            <div className={'waiter-info__name'}>Артем</div>
-            <div className={'waiter-info__desc'}>Официант · стол 12</div>
+            <div className={'waiter-info__name'}>{paymentInfo?.employee_name}</div>
+            <div className={'waiter-info__desc'}>
+              {paymentInfo?.employee_role_label} · стол {test_table}
+            </div>
             {expanded ? (
               <div className={'waiters-message'}>
                 «Спасибо, что пришли к нам! Буду рад видеть вас снова»
@@ -129,10 +151,10 @@ function GuestPage() {
 
             <WaitersGoal
               className={'waiters-goal-guest'}
-              goal={'Курсы бариста в Милане'}
-              name={'Артема'}
-              need={50000}
-              sum={32000}
+              goal={paymentInfo?.active_goals[0].title ?? ''}
+              name={paymentInfo?.employee_name ?? ''}
+              need={Number(paymentInfo?.active_goals[0].target_amount)}
+              sum={Number(paymentInfo?.active_goals[0].collected_amount)}
               mode={expanded ? 'expanded' : 'default'}
             />
           </div>
@@ -229,15 +251,15 @@ function GuestPage() {
           {isPaymentModalOpen && (
             <PaymentModal
               info={{
-                waiterName: 'Артем',
+                waiterName: paymentInfo?.employee_name ?? '',
                 waiterPhoto: WaiterImg,
-                spot: 'Вкус-Сервис · Покровка',
+                spot: `Вкус-Сервис · ${paymentInfo?.merchant_name.split('Вкус-Сервис')[1]}`,
                 complimentLeft: waiterReview.length > 0 || selectedCompliments.length > 0,
                 restaurantComplimentLeft: restReview.length > 0,
                 goal: {
-                  name: 'Курсы бариста в Милане',
-                  collectedAmount: 32000,
-                  targetAmount: 50000,
+                  name: paymentInfo?.active_goals[0].title ?? '',
+                  collectedAmount: Number(paymentInfo?.active_goals[0].collected_amount),
+                  targetAmount: Number(paymentInfo?.active_goals[0].target_amount),
                 },
               }}
               amount={tipsValue}

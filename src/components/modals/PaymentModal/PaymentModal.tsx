@@ -31,9 +31,19 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
   const { hash } = useParams<{ hash: string }>();
   const setPaymentResult = usePaymentStore((state) => state.setPaymentResult);
   const [isClosing, setIsClosing] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<string>('SBP');
   const contentRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragOffset = useRef(0);
+
+  const getCommission = () => {
+    switch (selectedPayment) {
+      case 'SBP':
+        return Math.floor(amount * 0.02);
+      default:
+        return Math.floor(amount * 0.05);
+    }
+  };
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -91,9 +101,9 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
   };
 
   const payments_methods = [
-    { name: 'СБП', description: 'Через приложение банка', icon: SBPImg },
-    { name: 'Банковская карта', description: 'Visa, Mastercard, МИР', icon: CardImg },
-    { name: 'SberPay', description: 'Оплата в СберБанк Онлайн', icon: SberPayImg },
+    { id: 'SBP', name: 'СБП', description: 'Через приложение банка', icon: SBPImg },
+    { id: 'CARD', name: 'Банковская карта', description: 'Visa, Mastercard, МИР', icon: CardImg },
+    { id: 'SBERPAY', name: 'SberPay', description: 'Оплата в СберБанк Онлайн', icon: SberPayImg },
   ];
 
   const handlePayment = () => {
@@ -165,7 +175,10 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
                 type="radio"
                 name="payment-method"
                 value={el.name}
-                defaultChecked={index === 0}
+                onClick={() => {
+                  setSelectedPayment(el.id);
+                }}
+                defaultChecked={el.id === 'SBP'}
               />
             </label>
           ))}
@@ -176,15 +189,15 @@ function PaymentModal({ amount, onClose, info }: PaymentModalProps) {
             Чаевые <span>{amount} ₽</span>
           </div>
           <div className={'payment-info__row payment-info__row--commission'}>
-            Комиссия сервиса <span>{Math.floor(amount * 0.05)} ₽</span>
+            Комиссия сервиса <span>{getCommission()} ₽</span>
           </div>
 
           <div className={'payment-info__row payment-info__row--total'}>
-            Итого <span>{amount + Math.floor(amount * 0.05)} ₽</span>
+            Итого <span>{amount + getCommission()} ₽</span>
           </div>
         </div>
 
-        <Button onClick={handlePayment}>Оплатить {amount + Math.floor(amount * 0.05)} ₽</Button>
+        <Button onClick={handlePayment}>Оплатить {amount + getCommission()} ₽</Button>
         <div className={'payment-info-security'}>
           <PrivacyIcon /> Данные карты не передаются ресторану
         </div>

@@ -10,3 +10,4 @@ export { default as HeartIcon } from './heart.svg?react';
 export { default as HeartOutlineIcon } from './heart_outline.svg?react';
 export { default as ReviewIcon } from './review.svg?react';
 export { default as CheckIcon } from './check.svg?react';
+export { default as AppIcon } from './app-icon.svg?react';

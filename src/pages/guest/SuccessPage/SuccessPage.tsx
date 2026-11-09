@@ -68,7 +68,7 @@ function SuccessPage() {
         <div className={'success-body-info'}>
           {paymentResult?.complimentLeft ? (
             <div className={'success-body-info__item'}>
-              <HeartOutlineIcon /> <span>Комплимент {paymentResult.waiterName}у </span>
+              <HeartOutlineIcon /> <span>Комплимент {paymentResult.waiterName}</span>
               <div>
                 <CheckIcon /> Отправлен
               </div>
@@ -89,7 +89,7 @@ function SuccessPage() {
       </div>
 
       <div className={'success-bottom'}>
-        <Button onClick={() => navigate('/tip/1', { replace: true })}>Готово</Button>
+        <Button onClick={() => navigate('/', { replace: true })}>Готово</Button>
         <Button type={'outline'}>Оставить отзыв на картах</Button>
       </div>
     </Page>
